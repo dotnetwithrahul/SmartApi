@@ -1,0 +1,42 @@
+{
+    "products": {
+      "product1": {
+        "name": "Srilalitha Green Small Cut Idly Rava",
+        "weight": "50Kgs",
+        "price_per_bag": 3630.00,
+        "price_per_quintal": 3630.00,
+        "amc": 0.00,
+        "image_url": "path_to_image_of_srilalitha_product"
+      },
+      "product2": {
+        "name": "Netaji Blue Big Cut Rava",
+        "weight": "50Kgs",
+        "price_per_bag": 3580.00,
+        "price_per_quintal": 3580.00,
+        "amc": 0.00,
+        "image_url": "path_to_image_of_netaji_product"
+      }
+    },
+    "cart": {
+      "total_items": 0,
+      "total_price": 0.00
+    },
+    "navigation": {
+      "home": {
+        "icon_url": "home_icon_url"
+      },
+      "orders": {
+        "icon_url": "orders_icon_url"
+      },
+      "cart": {
+        "icon_url": "cart_icon_url"
+      },
+      "outlets": {
+        "icon_url": "outlets_icon_url"
+      },
+      "settings": {
+        "icon_url": "settings_icon_url"
+      }
+    }
+  }
+  
