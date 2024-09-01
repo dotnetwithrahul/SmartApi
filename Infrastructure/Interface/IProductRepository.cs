@@ -21,6 +21,8 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<IActionResult> ManageCategoryAsync(CategoryRequest categoryRequest);
         Task<IActionResult> InitiatePaymentAsync(PaymentRequest paymentRequest);
 
+        Task<IActionResult> ManageCustomerAsync(CustomerRequest customerRequest);
+        Task<IActionResult> SendOtpAsync(OtpRequest otpRequest);
 
 
         /// <summary>

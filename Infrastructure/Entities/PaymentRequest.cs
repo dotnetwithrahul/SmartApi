@@ -2,6 +2,9 @@
 {
     public class PaymentRequest
     {
-        public Dictionary<string, int> Products { get; set; } // ProductId and quantity
+
+        public string CustomerId { get; set; }
+        public Dictionary<string, int> Products { get; set; }
+
     }
 }

@@ -3,6 +3,7 @@ using FirebaseApiMain.Infrastructure.Entities;
 using FirebaseApiMain.Infrastructure.Interface;
 using FirebaseApiMain.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
+//using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FirebaseApiMain.Apis
@@ -35,5 +36,58 @@ namespace FirebaseApiMain.Apis
             return await productRepository.InitiatePaymentAsync(paymentRequest);
         }
 
+
+
+
+
+
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
+        {
+            // Set up the customer request with the 'login' flag
+            var customerRequest = new CustomerRequest
+            {
+                Flag = "login",
+                email = loginRequest.Email,
+                passwordHash = loginRequest.Password
+            };
+
+            // Call the service method
+            var result = await productRepository.ManageCustomerAsync(customerRequest);
+
+            return result;
+        }
+
+
+
+
+
+
+
+        [HttpPost("send-otp")]
+        public async Task<IActionResult> SendOtpAsync([FromBody] OtpRequest otpRequest)
+        {
+            var otpRequests = new OtpRequest
+            {
+                email = otpRequest.email
+            };
+            return await productRepository.SendOtpAsync(otpRequests);
+        }
+
+
+        [HttpPost("register")]
+        public async Task<IActionResult> RegisterCustomerAsync([FromBody] CustomerRequest customerRequest)
+        {
+
+            var customerRequests = new CustomerRequest {
+
+                email = customerRequest.email,
+                passwordHash = customerRequest.passwordHash,
+                otp = customerRequest.otp,
+                Flag = "create"
+            };
+            return await productRepository.ManageCustomerAsync(customerRequests);
+        }
     }
 }

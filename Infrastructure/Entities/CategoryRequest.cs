@@ -8,8 +8,8 @@
         // The product ID (only required for update, delete, view_by_id operations)
         public string? CategoryId { get; set; }
 
-        public string ? name { get; set; }
-            public string ? image_url { get; set; }
-        
+        public string? name { get; set; }
+        public string? image_url { get; set; }
+        //public IFormFile ? imageFile { get; set; }
     }
 }
