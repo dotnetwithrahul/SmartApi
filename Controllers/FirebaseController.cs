@@ -18,89 +18,89 @@ namespace FirebaseApiMain.Controllers
         }
 
 
-        [HttpGet]
+        //[HttpGet]
 
-        public async  Task<IActionResult> Get()
-        {
-            var data = await  fc.GetAllProducts();
+        //public async  Task<IActionResult> Get()
+        //{
+        //    var data = await  fc.GetAllProducts();
 
-            return Ok(data);        
-        }
-
-
-        [HttpGet]
-        public async Task<ActionResult<Dictionary<string, Product>>> GetProducts()
-        {
-            var products = await fc.GetAllProducts();
-            return Ok(products);
-        }
+        //    return Ok(data);        
+        //}
 
 
-
-        [HttpPost]
-        public async Task<IActionResult> AddProduct([FromBody] Product product)
-        {
-            if (product == null)
-            {
-                return BadRequest("Product data is null");
-            }
-
-            // Generate a unique product ID or pass it from the client
-            var productId = "product_" + Guid.NewGuid().ToString(); // Example of generating a unique ID
-
-            try
-            {
-                await fc.AddProductAsync(productId, product);
-                return Ok(new { Message = "Product added successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = ex.Message });
-            }
-        }
+        //[HttpGet]
+        //public async Task<ActionResult<Dictionary<string, Product>>> GetProducts()
+        //{
+        //    var products = await fc.GetAllProducts();
+        //    return Ok(products);
+        //}
 
 
 
+        //[HttpPost]
+        //public async Task<IActionResult> AddProduct([FromBody] Product product)
+        //{
+        //    if (product == null)
+        //    {
+        //        return BadRequest("Product data is null");
+        //    }
 
-        [HttpPut("{productId}")]
-        public async Task<IActionResult> UpdateProduct(string productId, [FromBody] Product product)
-        {
-            if (string.IsNullOrEmpty(productId) || product == null)
-            {
-                return BadRequest("Invalid input");
-            }
+        //    // Generate a unique product ID or pass it from the client
+        //    var productId = "product_" + Guid.NewGuid().ToString(); // Example of generating a unique ID
 
-            try
-            {
-                await fc.UpdateProductAsync(productId, product);
-                return Ok(new { Message = "Product updated successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = ex.Message });
-            }
-        }
+        //    try
+        //    {
+        //        await fc.AddProductAsync(productId, product);
+        //        return Ok(new { Message = "Product added successfully" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { Message = ex.Message });
+        //    }
+        //}
 
 
 
-        [HttpDelete("{productId}")]
-        public async Task<IActionResult> DeleteProduct(string productId)
-        {
-            if (string.IsNullOrEmpty(productId))
-            {
-                return BadRequest("Product ID is required");
-            }
 
-            try
-            {
-                await fc.DeleteProductAsync(productId);
-                return Ok(new { Message = "Product deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = ex.Message });
-            }
-        }
+        //[HttpPut("{productId}")]
+        //public async Task<IActionResult> UpdateProduct(string productId, [FromBody] Product product)
+        //{
+        //    if (string.IsNullOrEmpty(productId) || product == null)
+        //    {
+        //        return BadRequest("Invalid input");
+        //    }
+
+        //    try
+        //    {
+        //        await fc.UpdateProductAsync(productId, product);
+        //        return Ok(new { Message = "Product updated successfully" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { Message = ex.Message });
+        //    }
+        //}
+
+
+
+        //[HttpDelete("{productId}")]
+        //public async Task<IActionResult> DeleteProduct(string productId)
+        //{
+        //    if (string.IsNullOrEmpty(productId))
+        //    {
+        //        return BadRequest("Product ID is required");
+        //    }
+
+        //    try
+        //    {
+        //        await fc.DeleteProductAsync(productId);
+        //        return Ok(new { Message = "Product deleted successfully" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { Message = ex.Message });
+        //    }
+        //}
 
     }
 }

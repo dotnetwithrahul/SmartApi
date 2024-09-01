@@ -1,3 +1,7 @@
+using FirebaseApiMain.Application.Interfaces;
+using FirebaseApiMain.Application.Services;
+using FirebaseApiMain.Infrastructure.Interface;
+using FirebaseApiMain.Infrastructure.Services;
 using FirebaseApiMain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +15,16 @@ builder.Services.AddSwaggerGen();
 
 
 builder.Services.AddScoped<FirebaseService>();
+
+
+
+builder.Services.AddHttpClient<IProductRepository, ProductRepository>();
+
+
+builder.Services.AddScoped<ICustomerProductService, CustomerProductServicecs>();
+
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
