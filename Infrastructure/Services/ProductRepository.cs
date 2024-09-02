@@ -23,14 +23,16 @@ namespace FirebaseApiMain.Infrastructure.Services
     {
         private readonly HttpClient _client;
 
+        private readonly IFileService fileService;
 
         private readonly IMemoryCache _cache;
         private const string OtpCacheKeyPrefix = "Otp_";
         private const int OtpExpiryMinutes = 5; // OTP validity duration in m
-        public ProductRepository(HttpClient client, IMemoryCache cache)
+        public ProductRepository(HttpClient client, IMemoryCache cache , IFileService _fileService)
         {
             _client = client;
             _cache = cache;
+            fileService = _fileService;
         }
 
 
@@ -471,18 +473,16 @@ namespace FirebaseApiMain.Infrastructure.Services
                         string newCategoryId = "cat_" + Guid.NewGuid().ToString();
                         categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{newCategoryId}.json";
 
-                        //categoryRequest.image_url = null;
 
-                        //if (categoryRequest.image_url == null)
-                        //{
-                        //    categoryRequest.image_url = await SavecategoriesImageToFileSystem(categoryRequest.imageFile, newCategoryId);
-                        //}
+                        //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
+                        string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
 
+                        //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
                             name = categoryRequest.name,
-                            image_url = categoryRequest.image_url
+                            image_url = imageUrl
                         }), Encoding.UTF8, "application/json");
 
                         response = await _client.PutAsync(categoryUrl, content);
@@ -536,12 +536,26 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                         categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json";
 
-                        content = new StringContent(JsonSerializer.Serialize(new
-                        {
-                            name = categoryRequest.name,
-                            image_url = categoryRequest.image_url
-                        }), Encoding.UTF8, "application/json");
 
+                        var existingCategoryResponse = await _client.GetAsync(categoryUrl);
+                        if (!existingCategoryResponse.IsSuccessStatusCode)
+                        {
+                            return new NotFoundObjectResult("Category not found.");
+                        }
+                        var existingCategoryData = await existingCategoryResponse.Content.ReadAsStringAsync();
+                        var existingCategory = JsonSerializer.Deserialize<CategoryRequest>(existingCategoryData);
+
+                        // Update only the fields that are provided
+                        var updatedCategory = new
+                        {
+                            name = categoryRequest.name ?? existingCategory.name,
+                            image_url = categoryRequest.imageFile != null
+                                ? await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, categoryRequest.CategoryId)
+                                : existingCategory.image_url
+                        };
+
+
+                        content = new StringContent(JsonSerializer.Serialize(updatedCategory), Encoding.UTF8, "application/json");
                         response = await _client.PatchAsync(categoryUrl, content);
 
                         if (response.IsSuccessStatusCode)

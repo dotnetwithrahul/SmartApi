@@ -3,6 +3,7 @@ using FirebaseApiMain.Application.Services;
 using FirebaseApiMain.Infrastructure.Interface;
 using FirebaseApiMain.Infrastructure.Services;
 using FirebaseApiMain.Services;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,8 @@ builder.Services.AddHttpClient<IProductRepository, ProductRepository>();
 
 builder.Services.AddScoped<ICustomerProductService, CustomerProductServicecs>();
 
+builder.Services.AddTransient<IFileService, FileService>();
+
 
 
 var app = builder.Build();
@@ -35,7 +38,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseSwagger();
+app.UseSwaggerUI();
+
+
 app.UseHttpsRedirection();
+app.UseStaticFiles();   
 
 app.UseAuthorization();
 

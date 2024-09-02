@@ -1,6 +1,7 @@
 ﻿using FirebaseApiMain.Dtos;
 using FirebaseApiMain.Infrastructure.Entities;
 using FirebaseApiMain.Infrastructure.Interface;
+using FirebaseApiMain.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,10 +14,11 @@ namespace FirebaseApiMain.Apis
 
         private readonly IProductRepository _productRepository;
 
-
-        public AdminController(IProductRepository productRepository)
+        private readonly IFileService fileService;
+        public AdminController(IProductRepository productRepository, IFileService _fileService)
         {
             _productRepository = productRepository;
+            fileService = _fileService;
         }
 
 
@@ -36,19 +38,42 @@ namespace FirebaseApiMain.Apis
 
         [HttpPost("ManageCategory")]
 
-        public async Task<IActionResult> ManageCategory([FromBody] CategoryRequest categoryRequest)
+        public async Task<IActionResult> ManageCategory( CategoryRequest categoryRequest)
         {
+
+            
             return await _productRepository.ManageCategoryAsync(categoryRequest);
         }
 
 
-        [HttpPost("manage")]
-        public async Task<IActionResult> ManageCustomerAsync([FromBody] CustomerRequest customerRequest)
+
+        [HttpPost("AddingCategory")]
+
+        public async Task<IActionResult> AddingCategory(CategoryRequest categoryRequest)
         {
-            return await _productRepository.ManageCustomerAsync(customerRequest);
+
+
+            return await _productRepository.ManageCategoryAsync(categoryRequest);
         }
 
+        //[HttpPost("manage")]
+        //public async Task<IActionResult> ManageCustomerAsync([FromBody] CustomerRequest customerRequest)
+        //{
+        //    return await _productRepository.ManageCustomerAsync(customerRequest);
+        //}
 
 
+
+        [HttpPost("ManageCustomerImage")]
+        public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)
+        {
+            string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
+            //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
+
+            return Ok();
+
+
+
+        }
     }
 }
