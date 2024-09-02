@@ -45,35 +45,36 @@ namespace FirebaseApiMain.Apis
             return await _productRepository.ManageCategoryAsync(categoryRequest);
         }
 
-
-
-        [HttpPost("AddingCategory")]
-
-        public async Task<IActionResult> AddingCategory(CategoryRequest categoryRequest)
+        [HttpPost("ManageCustomerAsync")]
+        public async Task<IActionResult> ManageCustomerAsync([FromBody] CustomerRequest customerRequest)
         {
-
-
-            return await _productRepository.ManageCategoryAsync(categoryRequest);
+            return await _productRepository.ManageCustomerAsync(customerRequest);
         }
 
-        //[HttpPost("manage")]
-        //public async Task<IActionResult> ManageCustomerAsync([FromBody] CustomerRequest customerRequest)
+
+
+
+        //[HttpPost("AddingCategory")]
+
+        //public async Task<IActionResult> AddingCategory(CategoryRequest categoryRequest)
         //{
-        //    return await _productRepository.ManageCustomerAsync(customerRequest);
+
+
+        //    return await _productRepository.ManageCategoryAsync(categoryRequest);
         //}
 
 
 
-        [HttpPost("ManageCustomerImage")]
-        public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)
-        {
-            string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
-            //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
 
-            return Ok();
+        //[HttpPost("ManageCustomerImage")]
+        //public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)
+        //{
+        //    string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
+        //    //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
+
+        //    return Ok();
 
 
-
-        }
+        //}
     }
 }

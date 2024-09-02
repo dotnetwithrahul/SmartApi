@@ -475,14 +475,14 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
                         //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
-                        string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
+                        //string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
 
                         //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
                             name = categoryRequest.name,
-                            image_url = imageUrl
+                            image_url = categoryRequest.image_url
                         }), Encoding.UTF8, "application/json");
 
                         response = await _client.PutAsync(categoryUrl, content);
@@ -549,9 +549,9 @@ namespace FirebaseApiMain.Infrastructure.Services
                         var updatedCategory = new
                         {
                             name = categoryRequest.name ?? existingCategory.name,
-                            image_url = categoryRequest.imageFile != null
-                                ? await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, categoryRequest.CategoryId)
-                                : existingCategory.image_url
+                            image_url = categoryRequest.image_url ?? existingCategory.image_url
+                                /*?*/ /*await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, categoryRequest.CategoryId)*/
+                                //: existingCategory.image_url
                         };
 
 
