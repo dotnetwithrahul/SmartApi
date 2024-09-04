@@ -70,7 +70,9 @@ namespace FirebaseApiMain.Apis
         {
             var otpRequests = new OtpRequest
             {
-                email = otpRequest.email
+                Flag = otpRequest.Flag, 
+                email = otpRequest.email,
+                otp = otpRequest.otp
             };
             return await productRepository.SendOtpAsync(otpRequests);
         }

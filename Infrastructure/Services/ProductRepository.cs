@@ -618,54 +618,77 @@ namespace FirebaseApiMain.Infrastructure.Services
 
         public async Task<IActionResult> SendOtpAsync(OtpRequest otpRequest)
         {
-            // Generate OTP and store it in memory cache with an expiry of 5 minutes
-            string otp = GenerateOtp();
-            Console.WriteLine(otp);
-
             string cacheKey = OtpCacheKeyPrefix + otpRequest.email;
 
-            // Remove any existing OTP if present
-            _cache.Remove(cacheKey);
-
-
-
-            _cache.Set(OtpCacheKeyPrefix + otpRequest.email, (otp, DateTime.UtcNow), TimeSpan.FromMinutes(OtpExpiryMinutes));
-
-            // SMTP email sending configuration
-            string smtpServer = "smtp.gmail.com";
-            int smtpPort = 587; // or 465 for SSL
-            string smtpUsername = "facebookfire96@gmail.com";
-            string smtpPassword = "pbml emow qhsk oaws";
-            string fromEmail = "facebookfire96@gmail.com";
-
-            // Compose the email
-            var mailMessage = new MailMessage
+            switch (otpRequest.Flag.ToLower())
             {
-                From = new MailAddress(fromEmail),
-                Subject = "Your OTP Code",
-                Body = $"Your OTP code is: {otp}",
-                IsBodyHtml = false, // Set to true if using HTML body
-            };
+                case "generate":
+                    // Generate OTP and store it in memory cache with an expiry of 5 minutes
+                    string otp = GenerateOtp();
+                    //Console.WriteLine(otp);
 
-            mailMessage.To.Add(otpRequest.email);
+                    // Remove any existing OTP if present
+                    _cache.Remove(cacheKey);
 
-            try
-            {
-                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
-                {
-                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
-                    smtpClient.EnableSsl = true; // Set to true if your SMTP server requires SSL
-                    await smtpClient.SendMailAsync(mailMessage);
-                }
+                    // Store the OTP in cache with an expiration time
+                    _cache.Set(cacheKey, (otp, DateTime.UtcNow), TimeSpan.FromMinutes(OtpExpiryMinutes));
 
-                return new OkObjectResult(new { Message = "OTP sent to the provided email address." });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
-                return new StatusCodeResult(500); // Internal Server Error
+                    // SMTP email sending configuration
+                    string smtpServer = "smtp.gmail.com";
+                    int smtpPort = 587; // or 465 for SSL
+                    string smtpUsername = "facebookfire96@gmail.com";
+                    string smtpPassword = "pbml emow qhsk oaws";
+                    string fromEmail = "facebookfire96@gmail.com";
+
+                    // Compose the email
+                    var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(fromEmail),
+                        Subject = "Your OTP Code",
+                        Body = $"Your OTP code is: {otp}",
+                        IsBodyHtml = false, // Set to true if using HTML body
+                    };
+
+                    mailMessage.To.Add(otpRequest.email);
+
+                    try
+                    {
+                        using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
+                        {
+                            smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                            smtpClient.EnableSsl = true; // Set to true if your SMTP server requires SSL
+                            await smtpClient.SendMailAsync(mailMessage);
+                        }
+
+                        return new OkObjectResult(new { Message = "OTP sent to the provided email address." });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
+                        return new StatusCodeResult(500); // Internal Server Error
+                    }
+
+                case "verify":
+                    // Verify the provided OTP
+                    if (_cache.TryGetValue(cacheKey, out (string cachedOtp, DateTime createdAt) cachedValue))
+                    {
+                        if (cachedValue.cachedOtp == otpRequest.otp && DateTime.UtcNow - cachedValue.createdAt < TimeSpan.FromMinutes(OtpExpiryMinutes))
+                        {
+                            return new OkObjectResult(new { Status = true, Message = "OTP verified successfully." });
+                        }
+                        else
+                        {
+                            return new OkObjectResult(new { Status = false, Message = "Invalid or expired OTP." });
+                        }
+                    }
+                    return new OkObjectResult(new { Status = false, Message = "OTP not found." });
+
+                default:
+                    return new BadRequestObjectResult("Invalid flag. Valid flags are 'generate' and 'verify'.");
             }
         }
+
+
         private string GenerateOtp()
         {
             Random random = new Random();
@@ -703,8 +726,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
 
 
-                        if (!VerifyOtp(customerRequest.email, customerRequest.otp))
-                            return new BadRequestObjectResult("Invalid or expired OTP.");
+                        //if (!VerifyOtp(customerRequest.email, customerRequest.otp))
+                        //    return new BadRequestObjectResult("Invalid or expired OTP.");
 
 
 

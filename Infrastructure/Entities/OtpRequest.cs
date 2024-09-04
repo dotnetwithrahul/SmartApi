@@ -2,6 +2,9 @@
 {
     public class OtpRequest
     {
-        public  string email { get; set; }
+        public string ? Flag { get; set; }
+        public  string? email { get; set; }
+        public  string ? otp { get; set; }
+
     }
 }
