@@ -14,6 +14,9 @@ using System.Net;
 
 using Paytm;
 using Paytm.Checksum;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+//using Newtonsoft.Json;
 
 
 
@@ -27,7 +30,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
         private readonly IMemoryCache _cache;
         private const string OtpCacheKeyPrefix = "Otp_";
-        private const int OtpExpiryMinutes = 5; // OTP validity duration in m
+        private const int OtpExpiryMinutes = 2; // OTP validity duration in m
         public ProductRepository(HttpClient client, IMemoryCache cache , IFileService _fileService)
         {
             _client = client;
@@ -594,6 +597,8 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
+
+
         private async Task<string> SavecategoriesImageToFileSystem(IFormFile imageFile, string categoryId)
         {
             // Define the path to save the image
@@ -689,6 +694,326 @@ namespace FirebaseApiMain.Infrastructure.Services
         }
 
 
+
+
+        public async Task<IActionResult> ManageOtpAsync(OtpRequest otpRequest)
+        {
+            try
+            {
+                string otpUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+
+                switch (otpRequest.Flag.ToLower())
+                {
+                    case "create":
+                        string newCategoryId = "cat_" + Guid.NewGuid().ToString();
+                       
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+                        //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
+                        //string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
+
+                        //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
+
+                        otpRequest.otp = "123456";
+                        content = new StringContent(JsonSerializer.Serialize(new
+                        {
+                            otp = otpRequest.otp,
+                            createdAt = DateTime.UtcNow.ToString("o")
+                        }), Encoding.UTF8, "application/json");
+
+                        response = await _client.PutAsync(otpUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Category created successfully.", CategoryId = newCategoryId });
+                        }
+                        break;
+
+                
+
+                    case "view_all":
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps.json";
+                        response = await _client.GetAsync(otpUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allCategoriesData = await response.Content.ReadAsStringAsync();
+                            var allCategories = JsonSerializer.Deserialize<Dictionary<string, OtpRequest>>(allCategoriesData);
+
+                            if (allCategories == null || !allCategories.Any())
+                            {
+                                return new NotFoundObjectResult("No categories found.");
+                            }
+
+                            return new OkObjectResult(allCategories);
+                        }
+                        break;
+
+              
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'view_all', 'view_by_id', 'update', and 'delete'.");
+                }
+
+                // Return appropriate status code if no valid operation was performed
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                Console.WriteLine($"An error occurred during the operation: {ex.Message}");
+                return new StatusCodeResult(500);
+            }
+        }
+
+
+
+        public async Task<IActionResult> SendOtpAsyncV2(OtpRequest otpRequest)
+        {
+            try
+            {
+                string otpUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+
+                switch (otpRequest.Flag.ToLower())
+                {
+                    case "generate":
+                        string otp = GenerateOtp();
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json";
+
+                        // Serialize OTP data
+                        var otpData = new
+                        {
+                            otp = otp,
+                            createdAt = DateTime.Now.ToString("o") // ISO 8601 format
+                        };
+
+                        string jsonOtpData = JsonSerializer.Serialize(otpData);
+                        content = new StringContent(jsonOtpData, Encoding.UTF8, "application/json");
+
+                        // Send PUT request to Firebase
+                        response = await _client.PutAsync(otpUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            // Send OTP via SMTP
+                            bool isEmailSent = await SendOtpEmailAsync(otpRequest.email, otp);
+                            if (isEmailSent)
+                            {
+                                return new OkObjectResult(new { Message = "OTP sent to the provided email address." });
+                            }
+                            return new StatusCodeResult(500);
+                        }
+                        //if (response.IsSuccessStatusCode)
+                        //{
+                        //    // Send OTP via SMTP asynchronously
+                        //    var emailSendingResult = await Task.Run(() => SendOtpEmailAsync(otpRequest.email, otp));
+                        //    return new OkObjectResult(new { Message = "OTP sent to the provided email address." });
+                        //}
+                        break;
+
+                    case "verify":
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json";
+                        response = await _client.GetAsync(otpUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var otpDatav = await response.Content.ReadAsStringAsync();
+
+                            // Check if the data exists
+                            if (string.IsNullOrEmpty(otpDatav) || otpDatav == "{}" || otpDatav == "null")
+                            {
+                                return new BadRequestObjectResult("OTP not found.");
+                            }
+
+                            // Deserialize the JSON response into OtpModel
+                            OtpRequest storedOtp = JsonSerializer.Deserialize<OtpRequest>(otpDatav);
+
+                            if (storedOtp != null)
+                            {
+                                // Convert 'createdAt' to DateTime
+                                DateTime createdAt = DateTime.Parse(storedOtp.createdAt);
+
+                                // Compare the OTP values and check expiry time
+                                if (storedOtp.otp == otpRequest.otp && DateTime.Now - createdAt < TimeSpan.FromMinutes(OtpExpiryMinutes))
+                                {
+                                    // Remove OTP after successful verification
+                                    //await _client.DeleteAsync(otpUrl);
+                                    return new OkObjectResult(new { Status = true, Message = "OTP verified successfully." });
+                                }
+                                else
+                                {
+                                    return new OkObjectResult(new { Status = false, Message = "Invalid or expired OTP." });
+                                }
+                            }
+                        }
+                        break;
+
+
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'generate' and 'verify'.");
+                }
+
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                return new StatusCodeResult(500);
+            }
+        }
+
+        private async Task<bool> SendOtpEmailAsync(string email, string otp)
+        {
+            try
+            {
+                // SMTP email sending configuration
+                string smtpServer = "smtp.gmail.com";
+                int smtpPort = 587;
+                string smtpUsername = "facebookfire96@gmail.com";
+                string smtpPassword = "pbml emow qhsk oaws";
+                string fromEmail = "facebookfire96@gmail.com";
+
+                // Compose the email
+                var mailMessage = new MailMessage
+                {
+                    From = new MailAddress(fromEmail),
+                    Subject = "Your OTP Code",
+                    Body = $"Your OTP code is: {otp}",
+                    IsBodyHtml = false
+                };
+
+                mailMessage.To.Add(email);
+
+                // Send email asynchronously
+                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
+                {
+                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                    smtpClient.EnableSsl = true;
+                    await smtpClient.SendMailAsync(mailMessage);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
+                return false;
+            }
+        }
+
+        //public async Task<IActionResult> SendOtpAsyncV2(OtpRequest otpRequest)
+        //{
+        //    try
+        //    {
+        //        string otpUrl;
+        //        HttpResponseMessage response = null;
+
+        //        switch (otpRequest.Flag.ToLower())
+        //        {
+        //            case "generate":
+        //                string otp = GenerateOtp();
+        //                string otpId = Guid.NewGuid().ToString(); // Unique ID for the OTP entry
+        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+
+        //                // Prepare data to store in Firebase
+        //                var otpData = new
+        //                {
+        //                    otp = otp,
+        //                    createdAt = DateTime.UtcNow.ToString("o") // ISO 8601 format
+        //                };
+
+        //                var content = new StringContent(JsonSerializer.Serialize(otpData), Encoding.UTF8, "application/json");
+
+        //                // Remove any existing OTP if present
+        //                await _client.DeleteAsync(otpUrl);
+
+        //                // Store the new OTP in Firebase
+        //                response = await _client.PutAsync(otpUrl, content);
+
+        //                if (response.IsSuccessStatusCode)
+        //                {
+        //                    // SMTP email sending configuration
+        //                    string smtpServer = "smtp.gmail.com";
+        //                    int smtpPort = 587;
+        //                    string smtpUsername = "facebookfire96@gmail.com";
+        //                    string smtpPassword = "pbml emow qhsk oaws";
+        //                    string fromEmail = "facebookfire96@gmail.com";
+
+        //                    // Compose the email
+        //                    var mailMessage = new MailMessage
+        //                    {
+        //                        From = new MailAddress(fromEmail),
+        //                        Subject = "Your OTP Code",
+        //                        Body = $"Your OTP code is: {otp}",
+        //                        IsBodyHtml = false
+        //                    };
+
+        //                    mailMessage.To.Add(otpRequest.email);
+
+        //                    try
+        //                    {
+        //                        using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
+        //                        {
+        //                            smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+        //                            smtpClient.EnableSsl = true;
+        //                            await smtpClient.SendMailAsync(mailMessage);
+        //                        }
+
+        //                        return new OkObjectResult(new { Message = "OTP sent to the provided email address." });
+        //                    }
+        //                    catch (Exception ex)
+        //                    {
+        //                        Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
+        //                        return new StatusCodeResult(500);
+        //                    }
+        //                }
+        //                break;
+
+        //            case "verify":
+        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+        //                response = await _client.GetAsync(otpUrl);
+
+        //                if (response.IsSuccessStatusCode)
+        //                {
+        //                    var otpData = await response.Content.ReadAsStringAsync();
+        //                    if (string.IsNullOrEmpty(otpData) || otpData == "{}" || otpData == "null")
+        //                    {
+        //                        return new BadRequestObjectResult("OTP not found.");
+        //                    }
+
+        //                    var storedOtp = JsonSerializer.Deserialize<dynamic>(otpData);
+        //                    string storedOtpValue = storedOtp.otp;
+        //                    DateTime createdAt = DateTime.Parse(storedOtp.createdAt);
+
+        //                    if (storedOtpValue == otpRequest.otp && DateTime.UtcNow - createdAt < TimeSpan.FromMinutes(OtpExpiryMinutes))
+        //                    {
+        //                        // Remove OTP after successful verification
+        //                        await _client.DeleteAsync(otpUrl);
+        //                        return new OkObjectResult(new { Status = true, Message = "OTP verified successfully." });
+        //                    }
+        //                    else
+        //                    {
+        //                        return new OkObjectResult(new { Status = false, Message = "Invalid or expired OTP." });
+        //                    }
+        //                }
+        //                break;
+
+        //            default:
+        //                return new BadRequestObjectResult("Invalid flag. Valid flags are 'generate' and 'verify'.");
+        //        }
+
+        //        return new StatusCodeResult((int)response.StatusCode);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"An error occurred: {ex.Message}");
+        //        return new StatusCodeResult(500);
+        //    }
+        //}
+
         private string GenerateOtp()
         {
             Random random = new Random();
@@ -726,9 +1051,20 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
 
 
-                        //if (!VerifyOtp(customerRequest.email, customerRequest.otp))
-                        //    return new BadRequestObjectResult("Invalid or expired OTP.");
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
+                        response = await _client.GetAsync(customerUrl);
 
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allCustomersData = await response.Content.ReadAsStringAsync();
+                            var allCustomers = JsonSerializer.Deserialize<Dictionary<string, CustomerRequest>>(allCustomersData);
+
+                           
+                            if (allCustomers != null && allCustomers.Values.Any(c => c.email == customerRequest.email))
+                            {
+                                return new BadRequestObjectResult("Already registered with this email. Go to Login");
+                            }
+                        }
 
 
                         string newCustomerId = "customer_" + Guid.NewGuid().ToString();
@@ -744,12 +1080,13 @@ namespace FirebaseApiMain.Infrastructure.Services
                             phoneNumber = customerRequest.phoneNumber,
                             customerImageUrl = customerRequest.customerImageUrl,
                             Addressline1 = customerRequest.Addressline1,
+                            Addressline2 = customerRequest.Addressline2,
                             Country = customerRequest.Country,
                             Nearby = customerRequest.Nearby,
                             city = customerRequest.city,
                             state = customerRequest.state,
                             zipCode = customerRequest.zipCode,
-                            dateRegistered = DateTime.UtcNow.ToString("o"), // ISO 8601 format
+                            dateRegistered = DateTime.Now.ToString("o"), // ISO 8601 format
                             isActive = true
                         }), Encoding.UTF8, "application/json");
 
@@ -796,27 +1133,45 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(customerRequest.customerId))
                             return new BadRequestObjectResult("Customer ID must be provided for update operation.");
 
+                        // Fetch the existing customer data
                         customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json";
+                        response = await _client.GetAsync(customerUrl);
 
-                        content = new StringContent(JsonSerializer.Serialize(new
+                        if (!response.IsSuccessStatusCode)
                         {
-                           
-                            firstName = customerRequest.firstName,
-                            lastName = customerRequest.lastName,
-                            email = customerRequest.email,
-                            passwordHash = HashPassword(customerRequest.passwordHash),
-                            phoneNumber = customerRequest.phoneNumber,
-                            customerImageUrl = customerRequest.customerImageUrl,
-                            Addressline1 = customerRequest.Addressline1,
-                            Country = customerRequest.Country,
-                            Nearby = customerRequest.Nearby,
-                            city = customerRequest.city,
-                            state = customerRequest.state,
-                            zipCode = customerRequest.zipCode,
-                            dateRegistered = DateTime.UtcNow.ToString("o"), // ISO 8601 format
-                            isActive = true
-                        }), Encoding.UTF8, "application/json");
+                            return new NotFoundObjectResult("Customer not found.");
+                        }
 
+                        var existingCustomerData = await response.Content.ReadAsStringAsync();
+                        if (string.IsNullOrEmpty(existingCustomerData) || existingCustomerData == "{}" || existingCustomerData == "null")
+                        {
+                            return new NotFoundObjectResult("Customer not found.");
+                        }
+
+                        // Deserialize the existing customer data
+                        var existingCustomer = JsonSerializer.Deserialize<CustomerRequest>(existingCustomerData);
+
+                        // Update fields only if they are provided (not null or empty)
+                        var updatedCustomer = new
+                        {
+                            firstName = !string.IsNullOrEmpty(customerRequest.firstName) ? customerRequest.firstName : existingCustomer.firstName,
+                            lastName = !string.IsNullOrEmpty(customerRequest.lastName) ? customerRequest.lastName : existingCustomer.lastName,
+                            email = !string.IsNullOrEmpty(customerRequest.email) ? customerRequest.email : existingCustomer.email,
+                            passwordHash = !string.IsNullOrEmpty(customerRequest.passwordHash) ? HashPassword(customerRequest.passwordHash) : existingCustomer.passwordHash,
+                            phoneNumber = !string.IsNullOrEmpty(customerRequest.phoneNumber) ? customerRequest.phoneNumber : existingCustomer.phoneNumber,
+                            customerImageUrl = !string.IsNullOrEmpty(customerRequest.customerImageUrl) ? customerRequest.customerImageUrl : existingCustomer.customerImageUrl,
+                            Addressline1 = !string.IsNullOrEmpty(customerRequest.Addressline1) ? customerRequest.Addressline1 : existingCustomer.Addressline1,
+                            Country = !string.IsNullOrEmpty(customerRequest.Country) ? customerRequest.Country : existingCustomer.Country,
+                            Nearby = !string.IsNullOrEmpty(customerRequest.Nearby) ? customerRequest.Nearby : existingCustomer.Nearby,
+                            city = !string.IsNullOrEmpty(customerRequest.city) ? customerRequest.city : existingCustomer.city,
+                            state = !string.IsNullOrEmpty(customerRequest.state) ? customerRequest.state : existingCustomer.state,
+                            zipCode = !string.IsNullOrEmpty(customerRequest.zipCode) ? customerRequest.zipCode : existingCustomer.zipCode,
+                            dateRegistered = existingCustomer.dateRegistered, // Keep the original registration date
+                            isActive = existingCustomer.isActive // Keep the original status
+                        };
+
+                        // Send the updated customer data
+                        content = new StringContent(JsonSerializer.Serialize(updatedCustomer), Encoding.UTF8, "application/json");
                         response = await _client.PatchAsync(customerUrl, content);
 
                         if (response.IsSuccessStatusCode)
@@ -824,6 +1179,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new OkObjectResult(new { Message = "Customer updated successfully." });
                         }
                         break;
+
 
                     case "delete":
                         if (string.IsNullOrEmpty(customerRequest.customerId))
@@ -840,7 +1196,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                     case "login":
                         if (string.IsNullOrEmpty(customerRequest.email) || string.IsNullOrEmpty(customerRequest.passwordHash))
-                            return new BadRequestObjectResult("Email and password must be provided for login.");
+                            return new BadRequestObjectResult(new { Status = false, Message = "Email and password must be provided for login." });
 
                         // Fetch customer by email
                         customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
@@ -853,26 +1209,53 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                             if (allCustomers == null || !allCustomers.Any())
                             {
-                                return new NotFoundObjectResult("No customers found.");
+                                return new NotFoundObjectResult(new { Status = false, Message = "Not Registered, please go to sign up." });
                             }
 
                             var customer = allCustomers.Values.FirstOrDefault(c => c.email == customerRequest.email);
 
                             if (customer == null)
                             {
-                                return new BadRequestObjectResult("Customer not found.");
+                                return new BadRequestObjectResult(new { Status = false, Message = "Not Registered, please go to sign up." });
                             }
 
                             // Verify password
                             bool isPasswordValid = VerifyPassword(customerRequest.passwordHash, customer.passwordHash);
                             if (!isPasswordValid)
                             {
-                                return new BadRequestObjectResult("Invalid password.");
+                                return new BadRequestObjectResult(new { Status = false, Message = "Invalid password." });
                             }
 
-                            return new OkObjectResult(new { Message = "Login successful.", Customer = customer });
+                            // Find the customer ID from the dictionary
+                            var customerId = allCustomers.FirstOrDefault(x => x.Value.email == customerRequest.email).Key;
+
+                            return new OkObjectResult(new
+                            {
+                                Status = true,
+                                Message = "Login successful.",
+                                Customer = new
+                                {
+                                    customerId = customerId,
+                                    customer.firstName,
+                                    customer.lastName,
+                                    customer.email,
+                                    customer.passwordHash,
+                                    customer.phoneNumber,
+                                    customer.dateRegistered,
+                                    customer.customerImageUrl,
+                                    customer.isActive,
+                                    customer.Addressline1,
+                                    customer.Addressline2,
+                                    customer.Country,
+                                    customer.Nearby,
+                                    customer.city,
+                                    customer.state,
+                                    customer.zipCode
+                                }
+                            });
                         }
                         break;
+
 
 
 

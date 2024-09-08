@@ -13,6 +13,7 @@
         public string ? customerImageUrl { get; set; } 
         public bool? isActive { get; set; } // Indicates if the customer account is active or inactive
         public string? Addressline1 { get; set; }
+        public string? Addressline2 { get; set; }
         public string? Country { get; set; }
         public string? Nearby { get; set; }
         public string? city { get; set; }
