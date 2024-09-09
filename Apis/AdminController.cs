@@ -54,17 +54,29 @@ namespace FirebaseApiMain.Apis
 
 
 
-        //[HttpPost("AddingCategory")]
+        [HttpPost("AddingCategory")]
 
-        //public async Task<IActionResult> AddingCategory(CategoryRequest categoryRequest)
-        //{
+        public async Task<IActionResult> AddingCategory(CategoryImageRequest categoryRequest)
+        {
+
+            var data = await _productRepository.AddCategoryAsync(categoryRequest);
+
+            return Ok(data);
+        }
 
 
-        //    return await _productRepository.ManageCategoryAsync(categoryRequest);
-        //}
+
+        [HttpPost("AddingProdcut")]
+
+        public async Task<IActionResult> AddingProdcut(ProductImageRequest productImageRequest)
+        {
+
+            var data = await _productRepository.AddingProdcutAsync(productImageRequest);
 
 
 
+            return Ok(data);
+        }
 
         //[HttpPost("ManageCustomerImage")]
         //public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)

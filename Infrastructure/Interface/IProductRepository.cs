@@ -26,6 +26,8 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<IActionResult> SendOtpAsync(OtpRequest otpRequest);
         Task<IActionResult> SendOtpAsyncV2(OtpRequest otpRequest);
 
+        Task<bool> AddCategoryAsync(CategoryImageRequest category);
+        Task<bool> AddingProdcutAsync(ProductImageRequest productRequest);
 
         /// <summary>
         /// Fetches a product by its unique ID.

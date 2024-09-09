@@ -16,6 +16,7 @@ using Paytm;
 using Paytm.Checksum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Firebase.Storage;
 //using Newtonsoft.Json;
 
 
@@ -79,7 +80,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
-        public async Task<bool> AddCategoryAsync(Category category)
+        public async Task<bool> AddCategoryAsync(CategoryImageRequest category)
         {
             var result = false;
             try
@@ -87,12 +88,20 @@ namespace FirebaseApiMain.Infrastructure.Services
                 // Generate a new UUID for the category ID with a custom prefix
                 var categoryId = "cat_" + Guid.NewGuid().ToString();
 
+
+                var imageUrl = await UploadCatImageToFirebaseStorageAsync(category.imageFile);
+                if (string.IsNullOrEmpty(imageUrl))
+                {
+                    Console.WriteLine("Image upload failed.");
+                    return false;
+                }
+
                 // Create a new category object with the generated ID
                 var categoryWithId = new
                 {
                     id = categoryId,
                     name = category.name,
-                    image_url = category.image_url
+                    image_url = imageUrl
                 };
 
                 // Prepare the request URL, using the custom ID as part of the URL path
@@ -124,6 +133,125 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
+        public async Task<bool> AddingProdcutAsync(ProductImageRequest productRequest)
+        {
+            var result = false;
+            try
+            {
+                string productUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+                
+                // Generate a new UUID for the category ID with a custom prefix
+                var categoryId = "cat_" + Guid.NewGuid().ToString();
+
+
+                var imageUrl = await UploadPrdImageToFirebaseStorageAsync(productRequest.imageFile);
+
+                string newProductId = "prod_" + Guid.NewGuid().ToString();
+                productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json";
+
+
+                productRequest.image_url = imageUrl;
+                content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    productRequest.name,
+                    productRequest.weight,
+                    productRequest.no_of_bags,
+                    productRequest.no_of__quintals,
+                    productRequest.Amount,
+                    productRequest.amc,
+                    productRequest.image_url,
+                    productRequest.categoryId
+                }), Encoding.UTF8, "application/json");
+
+                response = await _client.PutAsync(productUrl, content);
+
+
+
+                if (string.IsNullOrEmpty(imageUrl))
+                {
+                    Console.WriteLine("Image upload failed.");
+                    return false;
+                }
+
+                // Create a new category object with the generated ID
+             
+
+                if (response.IsSuccessStatusCode)
+                {
+                    result = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                Console.WriteLine($"An error occurred while adding the category: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        public async Task<string> UploadPrdImageToFirebaseStorageAsync(IFormFile imageFile)
+        {
+            try
+            {
+                // Generate a unique filename with prefix
+                var fileName = "cat_img_" + Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+
+                // Open the file stream for the image
+                using (var stream = imageFile.OpenReadStream())
+                {
+                    // Initialize the FirebaseStorage object with your storage bucket
+                    var firebaseStorage = new FirebaseStorage("superapiimages.appspot.com");
+
+                    // Upload the file and get the download URL
+                    var downloadUrl = await firebaseStorage
+                        .Child("products") // Directory name in the storage bucket
+                        .Child(fileName)     // Filename
+                        .PutAsync(stream);
+
+                    // Return the public download URL
+                    return downloadUrl;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error uploading image: {ex.Message}");
+                return null;
+            }
+        }
+
+
+        public async Task<string> UploadCatImageToFirebaseStorageAsync(IFormFile imageFile)
+        {
+            try
+            {
+                // Generate a unique filename with prefix
+                var fileName = "cat_img_" + Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+
+                // Open the file stream for the image
+                using (var stream = imageFile.OpenReadStream())
+                {
+                    // Initialize the FirebaseStorage object with your storage bucket
+                    var firebaseStorage = new FirebaseStorage("superapiimages.appspot.com");
+
+                    // Upload the file and get the download URL
+                    var downloadUrl = await firebaseStorage
+                        .Child("categories") // Directory name in the storage bucket
+                        .Child(fileName)     // Filename
+                        .PutAsync(stream);
+
+                    // Return the public download URL
+                    return downloadUrl;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error uploading image: {ex.Message}");
+                return null;
+            }
+        }
 
 
 
