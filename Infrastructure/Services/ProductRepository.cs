@@ -68,6 +68,18 @@ namespace FirebaseApiMain.Infrastructure.Services
             {
                 var productsContent = await productsResponse.Content.ReadAsStringAsync();
                 var products = JsonSerializer.Deserialize<Dictionary<string, Product>>(productsContent);
+
+                if (products != null)
+                {
+                    // Assign Firebase key to product id
+                    foreach (var productKey in products.Keys)
+                    {
+                        if (products[productKey].Id == null)
+                        {
+                            products[productKey].Id = productKey;
+                        }
+                    }
+                }
                 result["products"] = products ?? new Dictionary<string, Product>();
             }
             else

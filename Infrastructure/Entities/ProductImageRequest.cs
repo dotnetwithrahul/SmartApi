@@ -7,6 +7,7 @@
 
         // The product ID (only required for update, delete, view_by_id operations)
         public string ? ProductId { get; set; }
+        public string ? ID { get; set; }
 
         // Product properties
         public string ? name { get; set; }

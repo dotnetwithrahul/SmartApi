@@ -11,6 +11,6 @@
         public decimal ? Amount { get; set; }
         public string? image_url { get; set; }
         public string? categoryId { get; set; }  // Foreign Key
-        //public Category Category { get; set; }  // Navigation property
+        
     }
 }
