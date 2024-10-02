@@ -13,6 +13,8 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<Dictionary<string, object>> GetAllProductsAsync();
 
 
+
+
         //Task<bool> AddCategoryAsync(Category category);
         //Task<bool> AddProductAsync(Product Pproductroduct);
 
@@ -29,6 +31,7 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<bool> AddCategoryAsync(CategoryImageRequest category);
         Task<bool> AddingProdcutAsync(ProductImageRequest productRequest);
 
+        Task<bool> UpdateProductAsync(ProductImageRequest productRequest);
         /// <summary>
         /// Fetches a product by its unique ID.
         /// </summary>

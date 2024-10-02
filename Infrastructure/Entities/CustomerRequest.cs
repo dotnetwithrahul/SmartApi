@@ -20,6 +20,7 @@
         public string? state { get; set; }
         public string? zipCode { get; set; }
         public string? otp { get; set; }
+        public string? emailOrPhone { get; set; }
 
     }
 

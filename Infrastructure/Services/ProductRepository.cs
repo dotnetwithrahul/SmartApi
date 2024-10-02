@@ -153,55 +153,67 @@ namespace FirebaseApiMain.Infrastructure.Services
                 string productUrl;
                 StringContent content = null;
                 HttpResponseMessage response = null;
-                
-                // Generate a new UUID for the category ID with a custom prefix
-                var categoryId = "cat_" + Guid.NewGuid().ToString();
 
+                // Generate a new UUID for the product ID with a custom prefix
+                string newProductId = "prod_" + Guid.NewGuid().ToString();
 
+                // Upload the product image to Firebase storage and retrieve the image URL
                 var imageUrl = await UploadPrdImageToFirebaseStorageAsync(productRequest.imageFile);
 
-                string newProductId = "prod_" + Guid.NewGuid().ToString();
-                productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json";
-
-
-                productRequest.image_url = imageUrl;
-                content = new StringContent(JsonSerializer.Serialize(new
-                {
-                    productRequest.name,
-                    productRequest.weight,
-                    productRequest.no_of_bags,
-                    productRequest.no_of__quintals,
-                    productRequest.Amount,
-                    productRequest.amc,
-                    productRequest.image_url,
-                    productRequest.categoryId
-                }), Encoding.UTF8, "application/json");
-
-                response = await _client.PutAsync(productUrl, content);
-
-
-
+                // Check if image upload was successful
                 if (string.IsNullOrEmpty(imageUrl))
                 {
                     Console.WriteLine("Image upload failed.");
                     return false;
                 }
 
-                // Create a new category object with the generated ID
-             
+                // Assign the uploaded image URL to the product request
+                productRequest.image_url = imageUrl;
+
+                // Generate a new UUID for the category ID with a custom prefix if it doesn't exist
+                if (string.IsNullOrEmpty(productRequest.categoryId))
+                {
+                    productRequest.categoryId = "cat_" + Guid.NewGuid().ToString();
+                }
+
+                // Prepare the product URL in Firebase
+                productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json";
+
+                // Serialize the product details to be stored in Firebase
+                content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    Id = newProductId,
+                    productRequest.name,
+                    productRequest.Description,
+                    productRequest.ShortDescription,
+                    productRequest.Weight,
+                    productRequest.WeightUnit,
+                    productRequest.StockQuantity,
+                    productRequest.IsOutOfStock,
+                    productRequest.RestockDate,
+                    productRequest.Discount,
+                    productRequest.Amount,
+                    productRequest.image_url,
+                    productRequest.categoryId,
+                    productRequest.Rating,
+                    productRequest.ReviewCount
+                }), Encoding.UTF8, "application/json");
+
+                // Send the product data to Firebase
+                response = await _client.PutAsync(productUrl, content);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    result = true;
+                    result = true; // Indicate success if the response is successful
                 }
             }
             catch (Exception ex)
             {
                 // Log or handle the exception as needed
-                Console.WriteLine($"An error occurred while adding the category: {ex.Message}");
+                Console.WriteLine($"An error occurred while adding the product: {ex.Message}");
             }
 
-            return result;
+            return result; // Return whether the product was successfully added or not
         }
 
         public async Task<string> UploadPrdImageToFirebaseStorageAsync(IFormFile imageFile)
@@ -287,14 +299,21 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
+                            Id = newProductId,
                             productRequest.name,
-                            productRequest.weight,
-                            productRequest.no_of_bags,
-                            productRequest.no_of__quintals,
+                            productRequest.Description,
+                            productRequest.ShortDescription,
+                            productRequest.Weight,
+                            productRequest.WeightUnit,
+                            productRequest.StockQuantity,
+                            productRequest.IsOutOfStock,
+                            productRequest.RestockDate,
+                            productRequest.Discount,
                             productRequest.Amount,
-                            productRequest.amc,
                             productRequest.image_url,
-                            productRequest.categoryId
+                            productRequest.categoryId,
+                            productRequest.Rating,
+                            productRequest.ReviewCount
                         }), Encoding.UTF8, "application/json");
 
                         response = await _client.PutAsync(productUrl, content);
@@ -319,7 +338,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             {
                                 return new NotFoundObjectResult("Product not found.");
                             }
-                            var product = JsonSerializer.Deserialize<ProductRequest>(productData);
+                            var product = JsonSerializer.Deserialize<Product>(productData);
                             return new OkObjectResult(product);
                         }
                         break;
@@ -331,9 +350,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (response.IsSuccessStatusCode)
                         {
                             var allProductsData = await response.Content.ReadAsStringAsync();
-                            var allProducts = JsonSerializer.Deserialize<Dictionary<string, ProductRequest>>(allProductsData);
+                            var allProducts = JsonSerializer.Deserialize<Dictionary<string, Product>>(allProductsData);
 
-                            
                             return new OkObjectResult(allProducts);
                         }
                         break;
@@ -342,20 +360,45 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(productRequest.ProductId))
                             return new BadRequestObjectResult("Product ID must be provided for update operation.");
 
+                        // Fetch the existing product
                         productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        response = await _client.GetAsync(productUrl);
 
-                        content = new StringContent(JsonSerializer.Serialize(new
+                        if (!response.IsSuccessStatusCode)
                         {
-                            productRequest.name,
-                            productRequest.weight,
-                            productRequest.no_of_bags,
-                            productRequest.no_of__quintals,
-                            productRequest.Amount,
-                            productRequest.amc,
-                            productRequest.image_url,
-                            productRequest.categoryId
-                        }), Encoding.UTF8, "application/json");
+                            return new NotFoundObjectResult("Product not found.");
+                        }
 
+                        var existingProductData = await response.Content.ReadAsStringAsync();
+                        if (string.IsNullOrEmpty(existingProductData) || existingProductData == "{}" || existingProductData == "null")
+                        {
+                            return new NotFoundObjectResult("Product not found.");
+                        }
+
+                        var existingProduct = JsonSerializer.Deserialize<Product>(existingProductData);
+
+                        // Update only the fields that are not null in the request
+                        var updatedProduct = new
+                        {
+                            name = productRequest.name ?? existingProduct.name,
+                            Description = productRequest.Description ?? existingProduct.Description,
+                            ShortDescription = productRequest.ShortDescription ?? existingProduct.ShortDescription,
+                            Weight = productRequest.Weight ?? existingProduct.Weight,
+                            WeightUnit = productRequest.WeightUnit ?? existingProduct.WeightUnit,
+                            StockQuantity = productRequest.StockQuantity ?? existingProduct.StockQuantity,
+                            IsOutOfStock = productRequest.IsOutOfStock ?? existingProduct.IsOutOfStock,
+                            RestockDate = productRequest.RestockDate ?? existingProduct.RestockDate,
+                            Discount = productRequest.Discount ?? existingProduct.Discount,
+                            Amount = productRequest.Amount ?? existingProduct.Amount,
+                            image_url = productRequest.image_url ?? existingProduct.image_url,
+                            categoryId = productRequest.categoryId ?? existingProduct.categoryId,
+                            Rating = productRequest.Rating ?? existingProduct.Rating,
+                            ReviewCount = productRequest.ReviewCount ?? existingProduct.ReviewCount
+                        };
+
+                        content = new StringContent(JsonSerializer.Serialize(updatedProduct), Encoding.UTF8, "application/json");
+
+                        // Send the update request
                         response = await _client.PatchAsync(productUrl, content);
 
                         if (response.IsSuccessStatusCode)
@@ -363,6 +406,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new OkObjectResult(new { Message = "Product updated successfully." });
                         }
                         break;
+
 
                     case "delete":
                         if (string.IsNullOrEmpty(productRequest.ProductId))
@@ -376,6 +420,47 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new OkObjectResult(new { Message = "Product deleted successfully." });
                         }
                         break;
+                    case "update_stock_status":
+                        if (string.IsNullOrEmpty(productRequest.ProductId))
+                            return new BadRequestObjectResult("Product ID must be provided for update_stock_status operation.");
+
+                        // Fetch the existing product
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        response = await _client.GetAsync(productUrl);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            return new NotFoundObjectResult("Product not found.");
+                        }
+
+                        var existingStockProductData = await response.Content.ReadAsStringAsync();
+                        if (string.IsNullOrEmpty(existingStockProductData) || existingStockProductData == "{}" || existingStockProductData == "null")
+                        {
+                            return new NotFoundObjectResult("Product not found.");
+                        }
+
+                        var existingStockProduct = JsonSerializer.Deserialize<Product>(existingStockProductData);
+
+                        // Update stock status and restock date if provided
+                        var updatedStockProduct = new
+                        {
+                            IsOutOfStock = productRequest.IsOutOfStock ?? existingStockProduct.IsOutOfStock,
+                            RestockDate = productRequest.RestockDate ?? existingStockProduct.RestockDate
+                        };
+
+                        content = new StringContent(JsonSerializer.Serialize(updatedStockProduct), Encoding.UTF8, "application/json");
+
+                        // Send the update request
+                        response = await _client.PatchAsync(productUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Stock status updated successfully." });
+                        }
+                        break;
+
+
+
 
                     default:
                         return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'view_all', 'view_by_id', 'update', and 'delete'.");
@@ -388,6 +473,95 @@ namespace FirebaseApiMain.Infrastructure.Services
                 return new StatusCodeResult(500);
             }
         }
+
+
+        public async Task<bool> UpdateProductAsync(ProductImageRequest productRequest)
+        {
+            var result = false;
+            try
+            {
+                if (string.IsNullOrEmpty(productRequest.ProductId))
+                {
+                    Console.WriteLine("Product ID must be provided for update operation.");
+                    return false;
+                }
+
+                // Fetch the existing product from Firebase
+                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                var response = await _client.GetAsync(productUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("Product not found.");
+                    return false;
+                }
+
+                var existingProductData = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrEmpty(existingProductData) || existingProductData == "{}" || existingProductData == "null")
+                {
+                    Console.WriteLine("Product not found.");
+                    return false;
+                }
+
+                // Deserialize the existing product data
+                var existingProduct = JsonSerializer.Deserialize<Product>(existingProductData);
+
+                // Check if there's a new image to upload; otherwise, keep the existing image
+                if (productRequest.imageFile != null)
+                {
+                    var imageUrl = await UploadPrdImageToFirebaseStorageAsync(productRequest.imageFile);
+                    if (string.IsNullOrEmpty(imageUrl))
+                    {
+                        Console.WriteLine("Image upload failed.");
+                        return false;
+                    }
+                    productRequest.image_url = imageUrl;
+                }
+                else
+                {
+                    productRequest.image_url = existingProduct.image_url;
+                }
+
+                // Retain existing fields if the corresponding request fields are null
+                var updatedProduct = new
+                {
+                    Id = existingProduct.Id,
+                    name = productRequest.name ?? existingProduct.name,
+                    Description = productRequest.Description ?? existingProduct.Description,
+                    ShortDescription = productRequest.ShortDescription ?? existingProduct.ShortDescription,
+                    Weight = productRequest.Weight ?? existingProduct.Weight,
+                    WeightUnit = productRequest.WeightUnit ?? existingProduct.WeightUnit,
+                    StockQuantity = productRequest.StockQuantity ?? existingProduct.StockQuantity,
+                    IsOutOfStock = productRequest.IsOutOfStock ?? existingProduct.IsOutOfStock,
+                    RestockDate = productRequest.RestockDate ?? existingProduct.RestockDate,
+                    Discount = productRequest.Discount ?? existingProduct.Discount,
+                    Amount = productRequest.Amount ?? existingProduct.Amount,
+                    image_url = productRequest.image_url,
+                    categoryId = productRequest.categoryId ?? existingProduct.categoryId,
+                    Rating = productRequest.Rating ?? existingProduct.Rating,
+                    ReviewCount = productRequest.ReviewCount ?? existingProduct.ReviewCount
+                };
+
+                // Serialize the updated product details
+                var content = new StringContent(JsonSerializer.Serialize(updatedProduct), Encoding.UTF8, "application/json");
+
+                // Send the update request to Firebase
+                response = await _client.PatchAsync(productUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    result = true; // Indicate success if the response is successful
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                Console.WriteLine($"An error occurred while updating the product: {ex.Message}");
+            }
+
+            return result; // Return whether the product was successfully updated or not
+        }
+
 
 
 
@@ -600,7 +774,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
-    
+
 
         public async Task<IActionResult> ManageCategoryAsync(CategoryRequest categoryRequest)
         {
@@ -616,16 +790,11 @@ namespace FirebaseApiMain.Infrastructure.Services
                         string newCategoryId = "cat_" + Guid.NewGuid().ToString();
                         categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{newCategoryId}.json";
 
-
-                        //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
-                        //string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
-
-                        //string createdImageName = await fileService.SaveFileAsync(ImageFile, allowedFileExtentions);
-
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
                             name = categoryRequest.name,
-                            image_url = categoryRequest.image_url
+                            image_url = categoryRequest.image_url,
+                            slno = categoryRequest.slno // Save the slno
                         }), Encoding.UTF8, "application/json");
 
                         response = await _client.PutAsync(categoryUrl, content);
@@ -669,16 +838,28 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 return new NotFoundObjectResult("No categories found.");
                             }
 
-                            return new OkObjectResult(allCategories);
+                            // Prepare a list with category IDs included and sort by slno
+                            var sortedCategories = allCategories
+                                .Select(kvp => new
+                                {
+                                    CategoryId = kvp.Key, // Include category ID
+                                    kvp.Value.name,
+                                    kvp.Value.image_url,
+                                    kvp.Value.slno
+                                })
+                                .OrderBy(c => c.slno) // Sort by slno
+                                .ToList();
+
+                            return new OkObjectResult(sortedCategories);
                         }
                         break;
+
 
                     case "update":
                         if (string.IsNullOrEmpty(categoryRequest.CategoryId))
                             return new BadRequestObjectResult("Category ID must be provided for update operation.");
 
                         categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json";
-
 
                         var existingCategoryResponse = await _client.GetAsync(categoryUrl);
                         if (!existingCategoryResponse.IsSuccessStatusCode)
@@ -692,11 +873,9 @@ namespace FirebaseApiMain.Infrastructure.Services
                         var updatedCategory = new
                         {
                             name = categoryRequest.name ?? existingCategory.name,
-                            image_url = categoryRequest.image_url ?? existingCategory.image_url
-                                /*?*/ /*await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, categoryRequest.CategoryId)*/
-                                //: existingCategory.image_url
+                            image_url = categoryRequest.image_url ?? existingCategory.image_url,
+                            slno = categoryRequest.slno ?? existingCategory.slno // Update slno if provided
                         };
-
 
                         content = new StringContent(JsonSerializer.Serialize(updatedCategory), Encoding.UTF8, "application/json");
                         response = await _client.PatchAsync(categoryUrl, content);
@@ -1335,10 +1514,10 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "login":
-                        if (string.IsNullOrEmpty(customerRequest.email) || string.IsNullOrEmpty(customerRequest.passwordHash))
-                            return new BadRequestObjectResult(new { Status = false, Message = "Email and password must be provided for login." });
+                        if (string.IsNullOrEmpty(customerRequest.emailOrPhone) || string.IsNullOrEmpty(customerRequest.passwordHash))
+                            return new BadRequestObjectResult(new { Status = false, Message = "Email/Phone and password must be provided for login." });
 
-                        // Fetch customer by email
+                        // Fetch all customers from Firebase
                         customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
                         response = await _client.GetAsync(customerUrl);
 
@@ -1349,14 +1528,16 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                             if (allCustomers == null || !allCustomers.Any())
                             {
-                                return new NotFoundObjectResult(new { Status = false, Message = "Not Registered, please go to sign up." });
+                                return new NotFoundObjectResult(new { Status = false, Message = "Invalid username or password. Please try again" });
                             }
 
-                            var customer = allCustomers.Values.FirstOrDefault(c => c.email == customerRequest.email);
+                            // Find customer by email or phone number
+                            var customer = allCustomers.Values.FirstOrDefault(c =>
+                                c.email == customerRequest.emailOrPhone || c.phoneNumber == customerRequest.emailOrPhone);
 
                             if (customer == null)
                             {
-                                return new BadRequestObjectResult(new { Status = false, Message = "Not Registered, please go to sign up." });
+                                return new BadRequestObjectResult(new { Status = false, Message = "Invalid username or password. Please try again" });
                             }
 
                             // Verify password
@@ -1367,7 +1548,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             }
 
                             // Find the customer ID from the dictionary
-                            var customerId = allCustomers.FirstOrDefault(x => x.Value.email == customerRequest.email).Key;
+                            var customerId = allCustomers.FirstOrDefault(x => x.Value.email == customerRequest.emailOrPhone || x.Value.phoneNumber == customerRequest.emailOrPhone).Key;
 
                             return new OkObjectResult(new
                             {
@@ -1395,6 +1576,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             });
                         }
                         break;
+
 
 
 

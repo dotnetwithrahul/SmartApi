@@ -54,7 +54,7 @@ namespace FirebaseApiMain.Apis
             var customerRequest = new CustomerRequest
             {
                 Flag = "login",
-                email = loginRequest.Email,
+                emailOrPhone = loginRequest.emailOrPhone,
                 passwordHash = loginRequest.Password
             };
 

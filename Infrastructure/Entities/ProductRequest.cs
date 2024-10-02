@@ -9,14 +9,24 @@
         public string ? ProductId { get; set; }
 
         // Product properties
-        public string ? name { get; set; }
-        public decimal ? weight { get; set; }
-        public decimal ? no_of_bags { get; set; }
-        public decimal ? no_of__quintals { get; set; }
-        public decimal ?amc { get; set; }
-        public decimal ? Amount { get; set; }
-        public string ? image_url { get; set; }
-        public string ?categoryId { get; set; }
+        public string? Id { get; set; }  // Primary Key
+        public string? name { get; set; }
+        public string? Description { get; set; }
+
+        public string? ShortDescription { get; set; }
+        public string? Weight { get; set; }  // Weight of the product
+        public string? WeightUnit { get; set; }  // Unit of weight (e.g., kg, grams)
+
+        public int? StockQuantity { get; set; }
+        public bool? IsOutOfStock { get; set; }
+        public DateTime? RestockDate { get; set; }
+        public string? Discount { get; set; }
+        public decimal? Amount { get; set; }
+        public string? image_url { get; set; }
+        public string? categoryId { get; set; }
+        public double? Rating { get; set; }
+        public int? ReviewCount { get; set; }
+
     }
 
 }

@@ -78,6 +78,18 @@ namespace FirebaseApiMain.Apis
             return Ok(data);
         }
 
+
+
+        [HttpPost("UpdateProductAsync")]
+
+        public async Task<IActionResult> UpdateProductAsync(ProductImageRequest productImageRequest)
+        {
+
+            var data = await _productRepository.UpdateProductAsync(productImageRequest);
+
+             return Ok(data);
+        }
+
         //[HttpPost("ManageCustomerImage")]
         //public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)
         //{

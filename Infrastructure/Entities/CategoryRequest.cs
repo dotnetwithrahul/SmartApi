@@ -10,6 +10,9 @@
 
         public string? name { get; set; }
         public string? image_url { get; set; }
+
+
+        public int ? slno { get; set; }
         //public IFormFile ? imageFile { get; set; }
     }
 }
