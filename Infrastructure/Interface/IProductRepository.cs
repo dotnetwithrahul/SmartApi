@@ -32,6 +32,15 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<bool> AddingProdcutAsync(ProductImageRequest productRequest);
 
         Task<bool> UpdateProductAsync(ProductImageRequest productRequest);
+
+
+
+        Task<IActionResult> ManageCartAsync(CartRequest wishlistRequest);
+        Task<IActionResult> ManageWishlistAsync(WishlistRequest wishlistRequest);
+        Task<IActionResult> ManageOrderAsync(OrderRequest orderRequest);
+        Task<IActionResult> ManageCouponAsync(CouponRequest couponRequest);
+
+
         /// <summary>
         /// Fetches a product by its unique ID.
         /// </summary>

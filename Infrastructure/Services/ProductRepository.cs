@@ -17,6 +17,7 @@ using Paytm.Checksum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Firebase.Storage;
+using System;
 //using Newtonsoft.Json;
 
 
@@ -1608,6 +1609,749 @@ namespace FirebaseApiMain.Infrastructure.Services
             // Compare the provided hash with the stored hash
             return providedPasswordHash == storedPasswordHash;
         }
+
+
+
+
+
+
+        public async Task<IActionResult> ManageWishlistAsync(WishlistRequest wishlistRequest)
+        {
+            try
+            {
+                string wishlistUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+
+                switch (wishlistRequest.Flag.ToLower())
+                {
+                    case "create":
+                        // Generate a new UUID for the wishlist entry (or just use customerId and productId as the key)
+                        string wishlistId = $"wishlist_{wishlistRequest.CustomerId}_{wishlistRequest.ProductId}";
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistId}.json";
+
+                        wishlistRequest.DateAdded = DateTime.Now;
+                        // Create the wishlist entry
+                        content = new StringContent(JsonSerializer.Serialize(new
+                        {
+                            wishlistRequest.CustomerId,
+                            wishlistRequest.ProductId,
+                            wishlistRequest.DateAdded
+                        }), Encoding.UTF8, "application/json");
+
+                        response = await _client.PutAsync(wishlistUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Wishlist item created successfully.", WishlistId = wishlistId });
+                        }
+                        break;
+
+
+
+                    case "view_by_id":
+                        if (string.IsNullOrEmpty(wishlistRequest.CustomerId))
+                            return new BadRequestObjectResult("Customer ID must be provided for view_all_by_customer operation.");
+
+                        // Firebase query to retrieve all wishlist items by CustomerId
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists.json?orderBy=\"CustomerId\"&equalTo=\"{wishlistRequest.CustomerId}\"";
+                        response = await _client.GetAsync(wishlistUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allWishlistData = await response.Content.ReadAsStringAsync();
+                            var allWishlistItems = JsonSerializer.Deserialize<Dictionary<string, WishlistRequest>>(allWishlistData);
+
+                            if (allWishlistItems == null || !allWishlistItems.Any())
+                            {
+                                return new NotFoundObjectResult("No wishlist items found for the customer.");
+                            }
+
+                            var wishlistItemsWithProductDetails = new List<object>();
+
+                            foreach (var wishlistItem in allWishlistItems)
+                            {
+                                var productId = wishlistItem.Value.ProductId;
+                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json";
+                                var productResponse = await _client.GetAsync(productUrl);
+
+                                if (productResponse.IsSuccessStatusCode)
+                                {
+                                    var productData = await productResponse.Content.ReadAsStringAsync();
+                                    var product = JsonSerializer.Deserialize<JsonElement>(productData);
+
+                                    var productDetails = new
+                                    {
+                                        id = product.TryGetProperty("Id", out var idProp) ? idProp.GetString() : null,
+                                        name = product.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null,
+                                        shortDescription = product.TryGetProperty("ShortDescription", out var descProp) ? descProp.GetString() : null,
+                                        amount = product.TryGetProperty("Amount", out var amountProp) ? (decimal?)amountProp.GetDecimal() : null,
+                                        rating = product.TryGetProperty("Rating", out var ratingProp) ? (decimal?)ratingProp.GetDecimal() : null, // Changed from int? to decimal?
+                                        image_url = product.TryGetProperty("image_url", out var imageUrlProp) ? imageUrlProp.GetString() : null,
+                                        isOutOfStock = product.TryGetProperty("IsOutOfStock", out var stockProp) ? stockProp.GetBoolean() : (bool?)null
+                                    };
+
+                                    wishlistItemsWithProductDetails.Add(new
+                                    {
+                                        WishlistId = wishlistItem.Key,
+                                        wishlistItem.Value.CustomerId,
+                                        wishlistItem.Value.DateAdded,
+                                        ProductDetails = productDetails
+                                    });
+                                }
+                            }
+
+                            // Sorting the wishlist items by DateAdded in descending order
+                            var sortedWishlistItems = wishlistItemsWithProductDetails
+                                .OrderByDescending(item => item.GetType().GetProperty("DateAdded").GetValue(item))
+                                .ToList();
+
+                            return new OkObjectResult(sortedWishlistItems);
+                        }
+                        break;
+
+
+                    case "delete":
+                        if (string.IsNullOrEmpty(wishlistRequest.WishlistId))
+                            return new BadRequestObjectResult("Wishlist ID must be provided for delete operation.");
+
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistRequest.WishlistId}.json";
+                        response = await _client.DeleteAsync(wishlistUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Wishlist item deleted successfully." });
+                        }
+                        break;
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'view_by_id', and 'delete'.");
+                }
+
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred during the operation: {ex.Message}");
+                return new StatusCodeResult(500);
+            }
+        }
+
+
+
+
+
+        public async Task<IActionResult> ManageCartAsync(CartRequest cartRequest)
+        {
+            try
+            {
+                string cartUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+
+                switch (cartRequest.Flag.ToLower())
+                {
+                    case "create":
+                        // Generate a new UUID for the cart entry (or use CustomerId and ProductId as key)
+                        string cartId = $"cart_{cartRequest.CustomerId}_{cartRequest.ProductId}";
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartId}.json";
+
+                        cartRequest.DateAdded = DateTime.Now;
+
+                        // Create the cart entry with product quantity
+                        content = new StringContent(JsonSerializer.Serialize(new
+                        {
+                            cartRequest.CustomerId,
+                            cartRequest.ProductId,
+                            cartRequest.Quantity,  // You can manage product quantity here
+                            cartRequest.DateAdded
+                        }), Encoding.UTF8, "application/json");
+
+                        response = await _client.PutAsync(cartUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Product added to cart successfully.", CartId = cartId });
+                        }
+                        break;
+
+                    case "view_by_id":
+                        if (string.IsNullOrEmpty(cartRequest.CustomerId))
+                            return new BadRequestObjectResult("Customer ID must be provided for view_by_customer operation.");
+
+                        // View all cart items for a specific customer
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts.json?orderBy=%22CustomerId%22&equalTo=%22{cartRequest.CustomerId}%22";
+                        response = await _client.GetAsync(cartUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allCartData = await response.Content.ReadAsStringAsync();
+                            var allCartItems = JsonSerializer.Deserialize<Dictionary<string, CartRequest>>(allCartData);
+
+                            if (allCartItems == null || !allCartItems.Any())
+                            {
+                                return new NotFoundObjectResult("No cart items found for the customer.");
+                            }
+
+                            // Retrieve product details for each cart item
+                            var cartItemsWithProductDetails = new List<object>();
+
+                            foreach (var cartItem in allCartItems)
+                            {
+                                var productId = cartItem.Value.ProductId;
+                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json";
+                                var productResponse = await _client.GetAsync(productUrl);
+
+                                if (productResponse.IsSuccessStatusCode)
+                                {
+                                    var productData = await productResponse.Content.ReadAsStringAsync();
+                                    var product = JsonSerializer.Deserialize<JsonElement>(productData);
+
+                                    // Safely access the specific product fields using TryGetProperty
+                                    var productDetails = new
+                                    {
+                                        id = product.TryGetProperty("Id", out var idProp) ? idProp.GetString() : null,
+                                        name = product.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null,
+                                        shortDescription = product.TryGetProperty("ShortDescription", out var descProp) ? descProp.GetString() : null,
+                                        amount = product.TryGetProperty("Amount", out var amountProp) ? (decimal?)amountProp.GetDecimal() : null,
+                                        rating = product.TryGetProperty("Rating", out var ratingProp) ? (decimal?)ratingProp.GetDecimal() : null, // Changed from int? to decimal?
+                                        image_url = product.TryGetProperty("image_url", out var imageUrlProp) ? imageUrlProp.GetString() : null,
+                                        isOutOfStock = product.TryGetProperty("IsOutOfStock", out var stockProp) ? stockProp.GetBoolean() : (bool?)null
+                                    };
+
+
+                                    cartItemsWithProductDetails.Add(new
+                                    {
+                                        CartId = cartItem.Key,
+                                        cartItem.Value.CustomerId,
+                                        cartItem.Value.Quantity,
+                                        cartItem.Value.DateAdded,
+                                        ProductDetails = productDetails
+                                    });
+                                }
+                            }
+
+                            return new OkObjectResult(cartItemsWithProductDetails);
+                        }
+                        break;
+
+
+                    case "delete":
+                        if (string.IsNullOrEmpty(cartRequest.CartId))
+                            return new BadRequestObjectResult("Cart ID must be provided for remove operation.");
+
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartRequest.CartId}.json";
+                        response = await _client.DeleteAsync(cartUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Cart item removed successfully." });
+                        }
+                        break;
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'Create', 'view_by_id', and 'delete'.");
+                }
+
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred during the operation: {ex.Message}");
+                return new StatusCodeResult(500);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+        public async Task<IActionResult> ManageOrderAsync(OrderRequest orderRequest)
+        {
+            try
+            {
+                string orderUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+                decimal deliveryCharges = 0m;
+                decimal taxPercentage = 0m;
+                decimal discount = 0;
+                var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+
+                switch (orderRequest.Flag.ToLower())
+                {
+                    case "create":
+                        string newOrderId = "order_" + Guid.NewGuid().ToString();
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{newOrderId}.json";
+
+                        // Fetch product details for each item to calculate the total price
+                        decimal subTotal = 0m;  // Initialize subTotal as non-nullable decimal
+                        foreach (var item in orderRequest.Items)
+                        {
+                            string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                            var productResponse = await _client.GetAsync(productUrl);
+                            if (productResponse.IsSuccessStatusCode)
+                            {
+                                var productData = await productResponse.Content.ReadAsStringAsync();
+                                var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                decimal productAmount = product.Amount ?? 0m;  // Safely handling nullable decimal
+                                item.UnitPrice = productAmount;
+                                item.TotalPrice = productAmount * item.Quantity ?? 0m;  // Ensure TotalPrice is a non-nullable decimal
+                                subTotal += item.TotalPrice ?? 0m;  // Add non-nullable decimal value to subTotal
+                            }
+                        }
+
+
+                     
+                        if (!string.IsNullOrEmpty(orderRequest.CouponCode))
+                        {
+                            var couponRequest = new CouponRequest
+                            {
+                                Flag = "view_by_id",
+                                CouponId = orderRequest.CouponCode // Sending coupon code as CouponId
+                            };
+
+                            var couponResponse = await ManageCouponAsync(couponRequest);
+                            if (couponResponse is OkObjectResult okResult && okResult.Value is Coupon coupon)
+                            {
+                                
+                                discount = (coupon.DiscountPercentage?? 0 / 100) * subTotal;
+
+                               
+                                if (coupon.MaxDiscountAmount.HasValue && discount > coupon.MaxDiscountAmount.Value)
+                                {
+                                    discount = coupon.MaxDiscountAmount.Value;
+                                }
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult("Invalid coupon code.");
+                            }
+                        }
+
+                        decimal tax = subTotal * taxPercentage;
+                        decimal totalAmount = subTotal + deliveryCharges + tax - discount;
+
+
+                       
+                        var newOrder = new Order
+                        {
+                            OrderId = newOrderId,
+                            CustomerId = orderRequest.CustomerId,
+                            OrderPlacedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone),
+                            Items = orderRequest.Items,
+                            SubTotal = subTotal,
+                            DeliveryCharges = deliveryCharges,
+                            Tax = tax,
+                            TotalAmount = totalAmount,
+                            PaymentMethod = orderRequest.PaymentMethod,
+                            CouponCode = orderRequest.CouponCode,
+                            Discount = discount,
+                            Status = "Placed"
+                        };
+
+                        content = new StringContent(JsonSerializer.Serialize(newOrder), Encoding.UTF8, "application/json");
+                        response = await _client.PutAsync(orderUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Order created successfully.", OrderId = newOrderId });
+                        }
+                        break;
+
+                    case "update_status":
+                        if (string.IsNullOrEmpty(orderRequest.OrderId))
+                            return new BadRequestObjectResult("Order ID must be provided.");
+
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json";
+                        response = await _client.GetAsync(orderUrl);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            return new NotFoundObjectResult("Order not found.");
+                        }
+
+                        var orderData = await response.Content.ReadAsStringAsync();
+                        var existingOrder = JsonSerializer.Deserialize<Order>(orderData);
+
+                        // Convert orderRequest.Status to lower case for case-insensitive comparison
+                        string status = orderRequest.Status?.ToLower();
+
+                        // Update the status, dates, and additional fields
+                        switch (status)
+                        {
+                            case "cancel":
+                                existingOrder.Status = "Cancelled";
+                                existingOrder.CancelledDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+                                break;
+
+                            case "dispatched":
+                                existingOrder.Status = "Dispatched";
+                                existingOrder.DispatchedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+                                // Update EstimatedDeliveryDate only if a new value is provided
+                                if (orderRequest.EstimatedDeliveryDate.HasValue)
+                                {
+                                    existingOrder.EstimatedDeliveryDate = TimeZoneInfo.ConvertTimeFromUtc(orderRequest.EstimatedDeliveryDate.Value, istZone);
+                                }
+                                break;
+
+                            case "out_for_delivery":
+                                existingOrder.Status = "OutForDelivery";
+                                // Additional handling can be done here if needed
+                                break;
+
+                            case "delivered":
+                                existingOrder.Status = "Delivered";
+                                existingOrder.DeliveredDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+                                // Optional: Clear or update EstimatedDeliveryDate if needed
+                                break;
+
+                            default:
+                                // Handle custom statuses and update AdditionalStatus
+                                existingOrder.Status = status; // Update to the new custom status
+                                if (!string.IsNullOrEmpty(orderRequest.AdditionalStatus))
+                                {
+                                    existingOrder.AdditionalStatus = orderRequest.AdditionalStatus; // Update additional status if provided
+                                }
+                                // Update EstimatedDeliveryDate only if a new value is provided
+                                if (orderRequest.EstimatedDeliveryDate.HasValue)
+                                {
+                                    existingOrder.EstimatedDeliveryDate = TimeZoneInfo.ConvertTimeFromUtc(orderRequest.EstimatedDeliveryDate.Value, istZone);
+                                }
+                                break;
+                        }
+
+                        // Create the content for updating the order
+                        content = new StringContent(JsonSerializer.Serialize(existingOrder), Encoding.UTF8, "application/json");
+                        response = await _client.PatchAsync(orderUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = $"Order status updated to '{existingOrder.Status}' successfully." });
+                        }
+                        break;
+
+                    case "view_by_id":
+                        if (string.IsNullOrEmpty(orderRequest.OrderId))
+                            return new BadRequestObjectResult("Order ID must be provided for view_by_id operation.");
+
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json";
+                        response = await _client.GetAsync(orderUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var orderDetails = await response.Content.ReadAsStringAsync();
+                            if (string.IsNullOrEmpty(orderDetails) || orderDetails == "{}" || orderDetails == "null")
+                            {
+                                return new NotFoundObjectResult("Order not found.");
+                            }
+
+                            var order = JsonSerializer.Deserialize<Order>(orderDetails);
+
+                            // Fetch product details
+                            foreach (var item in order.Items)
+                            {
+                                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                var productResponse = await _client.GetAsync(productUrl);
+                                if (productResponse.IsSuccessStatusCode)
+                                {
+                                    var productData = await productResponse.Content.ReadAsStringAsync();
+                                    var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                    // Add product details to the item
+                                    item.ProductDetails = new ProductDetails
+                                    {
+                                        Id = product.Id,
+                                        Name = product.name,
+                                        ShortDescription = product.ShortDescription,
+                                        Amount = product.Amount ?? 0m,
+                                        Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                        ImageUrl = product.image_url,
+                                        IsOutOfStock = product.IsOutOfStock ?? false
+                                    };
+                                }
+                            }
+
+                            return new OkObjectResult(order);
+                        }
+                        break;
+
+                    case "view_by_customerid":
+                        if (string.IsNullOrEmpty(orderRequest.CustomerId))
+                            return new BadRequestObjectResult("Customer ID must be provided for view_by_customerid operation.");
+
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?orderBy=\"CustomerId\"&equalTo=\"{orderRequest.CustomerId}\"";
+                        response = await _client.GetAsync(orderUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var customerOrdersData = await response.Content.ReadAsStringAsync();
+                            var customerOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(customerOrdersData);
+
+                            // Fetch product details for each order
+                            foreach (var order in customerOrders.Values)
+                            {
+                                foreach (var item in order.Items)
+                                {
+                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                    var productResponse = await _client.GetAsync(productUrl);
+                                    if (productResponse.IsSuccessStatusCode)
+                                    {
+                                        var productData = await productResponse.Content.ReadAsStringAsync();
+                                        var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                        // Add product details to the item
+                                        item.ProductDetails = new ProductDetails
+                                        {
+                                            Id = product.Id,
+                                            Name = product.name,
+                                            ShortDescription = product.ShortDescription,
+                                            Amount = product.Amount ?? 0m,
+                                            Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                            ImageUrl = product.image_url,
+                                            IsOutOfStock = product.IsOutOfStock ?? false
+                                        };
+                                    }
+                                }
+                            }
+
+                            return new OkObjectResult(customerOrders);
+                        }
+                        break;
+
+                    case "view_all":
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json";
+                        response = await _client.GetAsync(orderUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allOrdersData = await response.Content.ReadAsStringAsync();
+                            var allOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(allOrdersData);
+
+                            // Fetch product details for each order
+                            foreach (var order in allOrders.Values)
+                            {
+                                foreach (var item in order.Items)
+                                {
+                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                    var productResponse = await _client.GetAsync(productUrl);
+                                    if (productResponse.IsSuccessStatusCode)
+                                    {
+                                        var productData = await productResponse.Content.ReadAsStringAsync();
+                                        var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                        // Add product details to the item
+                                        item.ProductDetails = new ProductDetails
+                                        {
+                                            Id = product.Id,
+                                            Name = product.name,
+                                            ShortDescription = product.ShortDescription,
+                                            Amount = product.Amount ?? 0m,
+                                            Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                            ImageUrl = product.image_url,
+                                            IsOutOfStock = product.IsOutOfStock ?? false
+                                        };
+                                    }
+                                }
+                            }
+
+                            return new OkObjectResult(allOrders);
+                        }
+                        break;
+
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'update_status', 'view_by_id', 'view_by_customerid', 'view_all', 'cancel'.");
+                }
+
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                return new StatusCodeResult(500);
+            }
+        }
+
+
+
+
+
+
+
+
+
+        public async Task<IActionResult> ManageCouponAsync(CouponRequest couponRequest)
+        {
+            try
+            {
+                string couponUrl;
+                StringContent content = null;
+                HttpResponseMessage response = null;
+
+                switch (couponRequest.Flag.ToLower())
+                {
+                    case "create":
+                        string newCouponId = "coupon_" + Guid.NewGuid().ToString();
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{newCouponId}.json";
+
+                        content = new StringContent(JsonSerializer.Serialize(new
+                        {
+                            CouponId = newCouponId,
+                            couponRequest.Code,
+                            couponRequest.DiscountPercentage,
+                            couponRequest.MaxDiscountAmount,
+                            couponRequest.MinimumPurchaseAmount, // Added minimum purchase amount
+                            couponRequest.ExpiryDate,
+                            IsActive = true, // Default to active
+                            couponRequest.UsageLimit,
+                            UsedCount = 0 // New coupons start with zero usage
+                        }), Encoding.UTF8, "application/json");
+
+                        response = await _client.PutAsync(couponUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Coupon created successfully.", CouponId = newCouponId });
+                        }
+                        break;
+
+                    case "view_by_id":
+                        if (string.IsNullOrEmpty(couponRequest.CouponId))
+                            return new BadRequestObjectResult("Coupon ID must be provided for view_by_id operation.");
+
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        response = await _client.GetAsync(couponUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var couponData = await response.Content.ReadAsStringAsync();
+                            if (string.IsNullOrEmpty(couponData) || couponData == "{}" || couponData == "null")
+                            {
+                                return new NotFoundObjectResult("Coupon not found.");
+                            }
+                            var coupon = JsonSerializer.Deserialize<Coupon>(couponData);
+                            return new OkObjectResult(coupon);
+                        }
+                        break;
+
+                    case "view_all":
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json";
+                        response = await _client.GetAsync(couponUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allCouponsData = await response.Content.ReadAsStringAsync();
+                            var allCoupons = JsonSerializer.Deserialize<Dictionary<string, Coupon>>(allCouponsData);
+
+                            return new OkObjectResult(allCoupons);
+                        }
+                        break;
+
+                    case "update":
+                        if (string.IsNullOrEmpty(couponRequest.CouponId))
+                            return new BadRequestObjectResult("Coupon ID must be provided for update operation.");
+
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        response = await _client.GetAsync(couponUrl);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            return new NotFoundObjectResult("Coupon not found.");
+                        }
+
+                        var existingCouponData = await response.Content.ReadAsStringAsync();
+                        if (string.IsNullOrEmpty(existingCouponData) || existingCouponData == "{}" || existingCouponData == "null")
+                        {
+                            return new NotFoundObjectResult("Coupon not found.");
+                        }
+
+                        var existingCoupon = JsonSerializer.Deserialize<Coupon>(existingCouponData);
+
+                        // Update only the fields that are not null in the request
+                        var updatedCoupon = new
+                        {
+                            Code = couponRequest.Code ?? existingCoupon.Code,
+                            DiscountPercentage = couponRequest.DiscountPercentage ?? existingCoupon.DiscountPercentage,
+                            MaxDiscountAmount = couponRequest.MaxDiscountAmount ?? existingCoupon.MaxDiscountAmount,
+                            MinimumPurchaseAmount = couponRequest.MinimumPurchaseAmount ?? existingCoupon.MinimumPurchaseAmount, // Update minimum purchase amount
+                            ExpiryDate = couponRequest.ExpiryDate ?? existingCoupon.ExpiryDate,
+                            IsActive = couponRequest.IsActive ?? existingCoupon.IsActive,
+                            UsageLimit = couponRequest.UsageLimit ?? existingCoupon.UsageLimit,
+                            UsedCount = existingCoupon.UsedCount
+                        };
+
+                        content = new StringContent(JsonSerializer.Serialize(updatedCoupon), Encoding.UTF8, "application/json");
+                        response = await _client.PatchAsync(couponUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Coupon updated successfully." });
+                        }
+                        break;
+
+                    case "delete":
+                        if (string.IsNullOrEmpty(couponRequest.CouponId))
+                            return new BadRequestObjectResult("Coupon ID must be provided for delete operation.");
+
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        response = await _client.DeleteAsync(couponUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Coupon deleted successfully." });
+                        }
+                        break;
+
+                    case "validate_coupon":
+                        if (string.IsNullOrEmpty(couponRequest.Code))
+                            return new BadRequestObjectResult("Coupon code must be provided for validation.");
+
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json";
+                        response = await _client.GetAsync(couponUrl);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var allCouponsData = await response.Content.ReadAsStringAsync();
+                            var allCoupons = JsonSerializer.Deserialize<Dictionary<string, Coupon>>(allCouponsData);
+
+                            var validCoupon = allCoupons.Values.FirstOrDefault(c =>
+                                c.Code.Equals(couponRequest.Code, StringComparison.OrdinalIgnoreCase) &&
+                                c.IsActive == true &&
+                                c.ExpiryDate > DateTime.UtcNow); // Check if active and not expired
+
+                            if (validCoupon != null)
+                            {
+                                return new OkObjectResult(new
+                                {
+                                    Message = "Coupon is valid.",
+                                    validCoupon.DiscountPercentage,
+                                    validCoupon.MaxDiscountAmount,
+                                    validCoupon.MinimumPurchaseAmount // Include minimum purchase amount in validation result
+                                });
+                            }
+                            return new BadRequestObjectResult("Coupon is invalid or has expired.");
+                        }
+                        break;
+
+                    default:
+                        return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'view_all', 'view_by_id', 'update', 'delete', and 'validate_coupon'.");
+                }
+
+                return new StatusCodeResult((int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                return new StatusCodeResult(500);
+            }
+        }
+
 
     }
 }

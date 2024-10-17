@@ -199,7 +199,39 @@ namespace FirebaseApiMain.Apis
 
 
 
-       
-      
+
+        [HttpPost("ManageWishlistAsync")]
+        public async Task<IActionResult> ManageWishlistAsync([FromBody] WishlistRequest wishlistRequest)
+        {
+
+            return await productRepository.ManageWishlistAsync(wishlistRequest);
+        }
+
+        [HttpPost("ManageCartAsync")]
+        public async Task<IActionResult> ManageCartAsync([FromBody] CartRequest cartRequest)
+        {
+
+            return await productRepository.ManageCartAsync(cartRequest);
+        }
+
+
+
+        [HttpPost("ManageCouponAsync")]
+        public async Task<IActionResult> ManageCouponAsync([FromBody] CouponRequest couponRequest)
+        {
+
+            return await productRepository.ManageCouponAsync(couponRequest);
+        }
+
+
+        [HttpPost("ManageOrderAsync")]
+        public async Task<IActionResult> ManageOrderAsync(OrderRequest orderRequest)
+        {
+
+            return await productRepository.ManageOrderAsync(orderRequest);
+        }
+
+
+
     }
 }
