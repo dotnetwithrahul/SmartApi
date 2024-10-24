@@ -47,7 +47,7 @@ namespace FirebaseApiMain.Infrastructure.Services
             var result = new Dictionary<string, object>();
 
             // Fetch categories
-            var categoriesUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories.json";
+            var categoriesUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories.json?auth={FirebaseContext.FirebaseAuthKey}";
             var categoriesResponse = await _client.GetAsync(categoriesUrl);
 
             if (categoriesResponse.IsSuccessStatusCode)
@@ -62,7 +62,7 @@ namespace FirebaseApiMain.Infrastructure.Services
             }
 
             // Fetch products
-            var productsUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products.json";
+            var productsUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products.json?auth={FirebaseContext.FirebaseAuthKey}";
             var productsResponse = await _client.GetAsync(productsUrl);
 
             if (productsResponse.IsSuccessStatusCode)
@@ -118,7 +118,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 };
 
                 // Prepare the request URL, using the custom ID as part of the URL path
-                var categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryId}.json";
+                var categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                 // Serialize the category object to JSON
                 var categoryJson = JsonSerializer.Serialize(categoryWithId);
@@ -178,7 +178,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 }
 
                 // Prepare the product URL in Firebase
-                productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json";
+                productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                 // Serialize the product details to be stored in Firebase
                 content = new StringContent(JsonSerializer.Serialize(new
@@ -228,7 +228,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 using (var stream = imageFile.OpenReadStream())
                 {
                     // Initialize the FirebaseStorage object with your storage bucket
-                    var firebaseStorage = new FirebaseStorage("superapiimages.appspot.com");
+                    var firebaseStorage = new FirebaseStorage("smartecom-cb32c.appspot.com");
 
                     // Upload the file and get the download URL
                     var downloadUrl = await firebaseStorage
@@ -259,7 +259,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 using (var stream = imageFile.OpenReadStream())
                 {
                     // Initialize the FirebaseStorage object with your storage bucket
-                    var firebaseStorage = new FirebaseStorage("superapiimages.appspot.com");
+                    var firebaseStorage = new FirebaseStorage("smartecom-cb32c.appspot.com");
 
                     // Upload the file and get the download URL
                     var downloadUrl = await firebaseStorage
@@ -296,7 +296,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "create":
                         string newProductId = "prod_" + Guid.NewGuid().ToString();
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
@@ -329,7 +329,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(productRequest.ProductId))
                             return new BadRequestObjectResult("Product ID must be provided for view_by_id operation.");
 
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(productUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -345,7 +345,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "view_all":
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(productUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -362,7 +362,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult("Product ID must be provided for update operation.");
 
                         // Fetch the existing product
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(productUrl);
 
                         if (!response.IsSuccessStatusCode)
@@ -413,7 +413,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(productRequest.ProductId))
                             return new BadRequestObjectResult("Product ID must be provided for delete operation.");
 
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(productUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -426,7 +426,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult("Product ID must be provided for update_stock_status operation.");
 
                         // Fetch the existing product
-                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                        productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(productUrl);
 
                         if (!response.IsSuccessStatusCode)
@@ -488,7 +488,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 }
 
                 // Fetch the existing product from Firebase
-                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json";
+                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                 var response = await _client.GetAsync(productUrl);
 
                 if (!response.IsSuccessStatusCode)
@@ -789,7 +789,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "create":
                         string newCategoryId = "cat_" + Guid.NewGuid().ToString();
-                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{newCategoryId}.json";
+                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{newCategoryId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
@@ -810,7 +810,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(categoryRequest.CategoryId))
                             return new BadRequestObjectResult("Category ID must be provided for view_by_id operation.");
 
-                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json";
+                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(categoryUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -826,7 +826,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "view_all":
-                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories.json";
+                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(categoryUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -860,7 +860,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(categoryRequest.CategoryId))
                             return new BadRequestObjectResult("Category ID must be provided for update operation.");
 
-                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json";
+                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         var existingCategoryResponse = await _client.GetAsync(categoryUrl);
                         if (!existingCategoryResponse.IsSuccessStatusCode)
@@ -891,7 +891,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(categoryRequest.CategoryId))
                             return new BadRequestObjectResult("Category ID must be provided for delete operation.");
 
-                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json";
+                        categoryUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/categories/{categoryRequest.CategoryId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(categoryUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -965,14 +965,93 @@ namespace FirebaseApiMain.Infrastructure.Services
                     string smtpPassword = "pbml emow qhsk oaws";
                     string fromEmail = "facebookfire96@gmail.com";
 
-                    // Compose the email
                     var mailMessage = new MailMessage
                     {
                         From = new MailAddress(fromEmail),
                         Subject = "Your OTP Code",
-                        Body = $"Your OTP code is: {otp}",
-                        IsBodyHtml = false, // Set to true if using HTML body
+                        Body = $@"
+    <!DOCTYPE html>
+    <html lang=""en"">
+    <head>
+        <meta charset=""UTF-8"">
+        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+        <title>Your OTP Code</title>
+        <style>
+            body {{
+                font-family: 'Arial', sans-serif;
+                background-color: #f3f3f5;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }}
+            .container {{
+                background-color: white;
+                width: 100%;
+                max-width: 500px;
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+                margin: 0 auto;
+                overflow: hidden;
+            }}
+            .header {{
+                background-color: #6a0dad;
+                color: white;
+                padding: 20px;
+                text-align: center;
+            }}
+            .header h1 {{
+                margin: 0;
+                font-size: 28px;
+            }}
+            .body {{
+                padding: 40px 20px;
+                text-align: center;
+            }}
+            .body p {{
+                font-size: 18px;
+                color: #555;
+                margin-bottom: 30px;
+            }}
+            .otp {{
+                font-size: 32px;
+                font-weight: bold;
+                background-color: #f5f5f5; /* Changed to light gray for contrast */
+                padding: 15px;
+                border-radius: 8px;
+                color: #6a0dad; /* Purple text color */
+                display: inline-block;
+                letter-spacing: 6px;
+                margin: 20px 0;
+            }}
+            .footer {{
+                padding: 20px;
+                text-align: center;
+                font-size: 14px;
+                color: #6a0dad;
+                background-color: #f3f3f5;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class=""container"">
+            <div class=""header"">
+                <h1>Verify Your Email</h1>
+            </div>
+            <div class=""body"">
+                <p>To complete your registration, please use the OTP code below:</p>
+                <div class=""otp"">{otp}</div> <!-- Dynamically insert OTP -->
+                <p>This OTP is valid for 5 minutes.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ",
+                        IsBodyHtml = true // Enable HTML formatting
                     };
+
 
                     mailMessage.To.Add(otpRequest.email);
 
@@ -1029,7 +1108,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
                         string newCategoryId = "cat_" + Guid.NewGuid().ToString();
                        
-                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
                         //string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
 
@@ -1053,7 +1132,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 
 
                     case "view_all":
-                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps.json";
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(otpUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1101,7 +1180,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "generate":
                         string otp = GenerateOtp();
-                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json";
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         // Serialize OTP data
                         var otpData = new
@@ -1135,7 +1214,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "verify":
-                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json";
+                        otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email.Replace(".", "_")}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(otpUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1236,7 +1315,7 @@ namespace FirebaseApiMain.Infrastructure.Services
         //            case "generate":
         //                string otp = GenerateOtp();
         //                string otpId = Guid.NewGuid().ToString(); // Unique ID for the OTP entry
-        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
         //                // Prepare data to store in Firebase
         //                var otpData = new
@@ -1293,7 +1372,7 @@ namespace FirebaseApiMain.Infrastructure.Services
         //                break;
 
         //            case "verify":
-        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json";
+        //                otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json?auth={FirebaseContext.FirebaseAuthKey}";
         //                response = await _client.GetAsync(otpUrl);
 
         //                if (response.IsSuccessStatusCode)
@@ -1371,7 +1450,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
 
 
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(customerUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1388,7 +1467,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
                         string newCustomerId = "customer_" + Guid.NewGuid().ToString();
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{newCustomerId}.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{newCustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
@@ -1422,7 +1501,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(customerRequest.customerId))
                             return new BadRequestObjectResult("Customer ID must be provided for view_by_id operation.");
 
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(customerUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1438,7 +1517,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "view_all":
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(customerUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1454,7 +1533,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult("Customer ID must be provided for update operation.");
 
                         // Fetch the existing customer data
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(customerUrl);
 
                         if (!response.IsSuccessStatusCode)
@@ -1481,6 +1560,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             phoneNumber = !string.IsNullOrEmpty(customerRequest.phoneNumber) ? customerRequest.phoneNumber : existingCustomer.phoneNumber,
                             customerImageUrl = !string.IsNullOrEmpty(customerRequest.customerImageUrl) ? customerRequest.customerImageUrl : existingCustomer.customerImageUrl,
                             Addressline1 = !string.IsNullOrEmpty(customerRequest.Addressline1) ? customerRequest.Addressline1 : existingCustomer.Addressline1,
+                            Addressline2 = !string.IsNullOrEmpty(customerRequest.Addressline2) ? customerRequest.Addressline2 : existingCustomer.Addressline2,
                             Country = !string.IsNullOrEmpty(customerRequest.Country) ? customerRequest.Country : existingCustomer.Country,
                             Nearby = !string.IsNullOrEmpty(customerRequest.Nearby) ? customerRequest.Nearby : existingCustomer.Nearby,
                             city = !string.IsNullOrEmpty(customerRequest.city) ? customerRequest.city : existingCustomer.city,
@@ -1505,7 +1585,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(customerRequest.customerId))
                             return new BadRequestObjectResult("Customer ID must be provided for delete operation.");
 
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{customerRequest.customerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(customerUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1519,7 +1599,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult(new { Status = false, Message = "Email/Phone and password must be provided for login." });
 
                         // Fetch all customers from Firebase
-                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json";
+                        customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(customerUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1628,7 +1708,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
                         // Generate a new UUID for the wishlist entry (or just use customerId and productId as the key)
                         string wishlistId = $"wishlist_{wishlistRequest.CustomerId}_{wishlistRequest.ProductId}";
-                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistId}.json";
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         wishlistRequest.DateAdded = DateTime.Now;
                         // Create the wishlist entry
@@ -1654,7 +1734,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult("Customer ID must be provided for view_all_by_customer operation.");
 
                         // Firebase query to retrieve all wishlist items by CustomerId
-                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists.json?orderBy=\"CustomerId\"&equalTo=\"{wishlistRequest.CustomerId}\"";
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists.json?orderBy=\"CustomerId\"&equalTo=\"{wishlistRequest.CustomerId}\"&auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(wishlistUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1672,7 +1752,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             foreach (var wishlistItem in allWishlistItems)
                             {
                                 var productId = wishlistItem.Value.ProductId;
-                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json";
+                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                                 var productResponse = await _client.GetAsync(productUrl);
 
                                 if (productResponse.IsSuccessStatusCode)
@@ -1715,7 +1795,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(wishlistRequest.WishlistId))
                             return new BadRequestObjectResult("Wishlist ID must be provided for delete operation.");
 
-                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistRequest.WishlistId}.json";
+                        wishlistUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/wishlists/{wishlistRequest.WishlistId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(wishlistUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1754,7 +1834,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     case "create":
                         // Generate a new UUID for the cart entry (or use CustomerId and ProductId as key)
                         string cartId = $"cart_{cartRequest.CustomerId}_{cartRequest.ProductId}";
-                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartId}.json";
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         cartRequest.DateAdded = DateTime.Now;
 
@@ -1780,7 +1860,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new BadRequestObjectResult("Customer ID must be provided for view_by_customer operation.");
 
                         // View all cart items for a specific customer
-                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts.json?orderBy=%22CustomerId%22&equalTo=%22{cartRequest.CustomerId}%22";
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts.json?orderBy=%22CustomerId%22&equalTo=%22{cartRequest.CustomerId}%22&auth={FirebaseContext.FirebaseAuthKey}";
+
                         response = await _client.GetAsync(cartUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1799,7 +1880,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             foreach (var cartItem in allCartItems)
                             {
                                 var productId = cartItem.Value.ProductId;
-                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json";
+                                var productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                                 var productResponse = await _client.GetAsync(productUrl);
 
                                 if (productResponse.IsSuccessStatusCode)
@@ -1840,7 +1921,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(cartRequest.CartId))
                             return new BadRequestObjectResult("Cart ID must be provided for remove operation.");
 
-                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartRequest.CartId}.json";
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartRequest.CartId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(cartUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -1848,6 +1929,48 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new OkObjectResult(new { Message = "Cart item removed successfully." });
                         }
                         break;
+
+
+
+                    case "update":
+                        if (string.IsNullOrEmpty(cartRequest.CartId))
+                            return new BadRequestObjectResult("Cart ID must be provided for update_qty operation.");
+
+                        if (cartRequest.Quantity <= 0)
+                            return new BadRequestObjectResult("Quantity must be greater than 0 for update operation.");
+
+                        // Construct the Firebase URL for the specific cart item
+                        cartUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartRequest.CartId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+
+                        // Fetch the existing cart item
+                        response = await _client.GetAsync(cartUrl);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            return new NotFoundObjectResult("Cart item not found.");
+                        }
+
+                        var cartData = await response.Content.ReadAsStringAsync();
+                        var existingCartItem = JsonSerializer.Deserialize<CartRequest>(cartData);
+
+                        if (existingCartItem == null)
+                        {
+                            return new NotFoundObjectResult("Cart item not found.");
+                        }
+
+                        // Update the quantity
+                        existingCartItem.Quantity = cartRequest.Quantity;
+
+                        // Send the updated cart data back to Firebase
+                        content = new StringContent(JsonSerializer.Serialize(existingCartItem), Encoding.UTF8, "application/json");
+                        response = await _client.PatchAsync(cartUrl, content);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return new OkObjectResult(new { Message = "Cart quantity updated successfully." });
+                        }
+                        break;
+
 
                     default:
                         return new BadRequestObjectResult("Invalid flag. Valid flags are 'Create', 'view_by_id', and 'delete'.");
@@ -1888,13 +2011,13 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "create":
                         string newOrderId = "order_" + Guid.NewGuid().ToString();
-                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{newOrderId}.json";
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{newOrderId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         // Fetch product details for each item to calculate the total price
-                        decimal subTotal = 0m;  // Initialize subTotal as non-nullable decimal
+                        decimal subTotal = 0m; // Initialize subTotal as non-nullable decimal
                         foreach (var item in orderRequest.Items)
                         {
-                            string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                            string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                             var productResponse = await _client.GetAsync(productUrl);
                             if (productResponse.IsSuccessStatusCode)
                             {
@@ -1908,8 +2031,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             }
                         }
 
-
-                     
+                        // Handle coupon code if provided
                         if (!string.IsNullOrEmpty(orderRequest.CouponCode))
                         {
                             var couponRequest = new CouponRequest
@@ -1921,10 +2043,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             var couponResponse = await ManageCouponAsync(couponRequest);
                             if (couponResponse is OkObjectResult okResult && okResult.Value is Coupon coupon)
                             {
-                                
-                                discount = (coupon.DiscountPercentage?? 0 / 100) * subTotal;
-
-                               
+                                discount = (coupon.DiscountPercentage ?? 0 / 100) * subTotal;
                                 if (coupon.MaxDiscountAmount.HasValue && discount > coupon.MaxDiscountAmount.Value)
                                 {
                                     discount = coupon.MaxDiscountAmount.Value;
@@ -1939,8 +2058,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         decimal tax = subTotal * taxPercentage;
                         decimal totalAmount = subTotal + deliveryCharges + tax - discount;
 
-
-                       
+                        // Create a new order
                         var newOrder = new Order
                         {
                             OrderId = newOrderId,
@@ -1962,15 +2080,75 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                         if (response.IsSuccessStatusCode)
                         {
-                            return new OkObjectResult(new { Message = "Order created successfully.", OrderId = newOrderId });
+                            // Fetch customer details after creating the order
+                            string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{orderRequest.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                            var customerResponse = await _client.GetAsync(customerUrl);
+                            if (customerResponse.IsSuccessStatusCode)
+                            {
+                                var customerData = await customerResponse.Content.ReadAsStringAsync();
+                                var customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+
+                                // Add customer details to the order object
+                                newOrder.CustomerDetails = customer; // Directly assign customer details
+
+                                // Return the response with the full order and customer details
+                                var result = new OkObjectResult(new
+                                {
+                                    Message = "Order created successfully.",
+                                    OrderDetails = newOrder,  // Contains the order information
+                                    CustomerDetails = customer // Contains the full customer details
+                                });
+
+                                // Run email notifications in the background
+                                Task.Run(async () =>
+                                {
+                                    string customerEmail = customer.email;
+                                    string customerName = customer.firstName + " " + customer.lastName;
+                                    string deliveryAddress = $"{customer.Addressline1}, {customer.Addressline2}, {customer.Nearby}, {customer.city}, {customer.state}, {customer.Country},  {customer.zipCode}  ";
+                                    string mobileNumber = customer.phoneNumber;
+
+                                    // Send email to customer
+                                    await SendOrderConfirmationEmail(customerEmail, newOrderId, customerName, deliveryAddress, mobileNumber, newOrder);
+
+                                    // Now fetch the admin email from the admin source
+                                    string adminUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/admin.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                    var adminResponse = await _client.GetAsync(adminUrl);
+                                    if (adminResponse.IsSuccessStatusCode)
+                                    {
+                                        var adminData = await adminResponse.Content.ReadAsStringAsync();
+                                        var admin = JsonSerializer.Deserialize<Admin>(adminData);
+                                        string adminEmail = admin.Email;
+
+                                        // Send email to admin with all customer details and order information
+                                        await SendAdminNotificationEmail(adminEmail, newOrderId, customerName, customerEmail, deliveryAddress, mobileNumber, newOrder);
+                                    }
+                                });
+
+                                return result = new OkObjectResult(new
+                                {
+                                    Message = "Order Placed  successfully.",
+                                    OrderDetails = newOrder  // Contains the order and customer information together
+                                });
+
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult("Failed to fetch customer details.");
+                            }
                         }
-                        break;
+                        else
+                        {
+                            return new BadRequestObjectResult("Failed to create order.");
+                        }
+
+
+
 
                     case "update_status":
                         if (string.IsNullOrEmpty(orderRequest.OrderId))
                             return new BadRequestObjectResult("Order ID must be provided.");
 
-                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json";
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(orderUrl);
 
                         if (!response.IsSuccessStatusCode)
@@ -2042,7 +2220,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(orderRequest.OrderId))
                             return new BadRequestObjectResult("Order ID must be provided for view_by_id operation.");
 
-                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json";
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{orderRequest.OrderId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(orderUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2058,7 +2236,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             // Fetch product details
                             foreach (var item in order.Items)
                             {
-                                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                                 var productResponse = await _client.GetAsync(productUrl);
                                 if (productResponse.IsSuccessStatusCode)
                                 {
@@ -2079,6 +2257,18 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 }
                             }
 
+                            // Fetch customer details
+                            string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                            var customerResponse = await _client.GetAsync(customerUrl);
+                            if (customerResponse.IsSuccessStatusCode)
+                            {
+                                var customerData = await customerResponse.Content.ReadAsStringAsync();
+                                var customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+
+                                // Add customer details to the order
+                                order.CustomerDetails = customer; // Directly assign customer details
+                            }
+
                             return new OkObjectResult(order);
                         }
                         break;
@@ -2087,7 +2277,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(orderRequest.CustomerId))
                             return new BadRequestObjectResult("Customer ID must be provided for view_by_customerid operation.");
 
-                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?orderBy=\"CustomerId\"&equalTo=\"{orderRequest.CustomerId}\"";
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?orderBy=%22CustomerId%22&equalTo=%22{orderRequest.CustomerId}%22&auth={FirebaseContext.FirebaseAuthKey}";
+
                         response = await _client.GetAsync(orderUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2095,12 +2286,24 @@ namespace FirebaseApiMain.Infrastructure.Services
                             var customerOrdersData = await response.Content.ReadAsStringAsync();
                             var customerOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(customerOrdersData);
 
-                            // Fetch product details for each order
+                            // Fetch customer details for the provided CustomerId
+                            string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{orderRequest.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                            var customerResponse = await _client.GetAsync(customerUrl);
+                            CustomerRequest customer = null;
+
+                            if (customerResponse.IsSuccessStatusCode)
+                            {
+                                var customerData = await customerResponse.Content.ReadAsStringAsync();
+                                customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+                            }
+
+                            // Add customer details to each order
                             foreach (var order in customerOrders.Values)
                             {
+                                order.CustomerDetails = customer; // Directly assign customer details to each order
                                 foreach (var item in order.Items)
                                 {
-                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                                     var productResponse = await _client.GetAsync(productUrl);
                                     if (productResponse.IsSuccessStatusCode)
                                     {
@@ -2127,7 +2330,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "view_all":
-                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json";
+                        orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(orderUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2135,12 +2338,26 @@ namespace FirebaseApiMain.Infrastructure.Services
                             var allOrdersData = await response.Content.ReadAsStringAsync();
                             var allOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(allOrdersData);
 
-                            // Fetch product details for each order
+                            // Fetch customer details for each order
                             foreach (var order in allOrders.Values)
                             {
+                                // Fetch customer details for each order
+                                string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                var customerResponse = await _client.GetAsync(customerUrl);
+                                CustomerRequest customer = null;
+
+                                if (customerResponse.IsSuccessStatusCode)
+                                {
+                                    var customerData = await customerResponse.Content.ReadAsStringAsync();
+                                    customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+                                }
+
+                                // Add customer details to the order
+                                order.CustomerDetails = customer; // Directly assign customer details to each order
+
                                 foreach (var item in order.Items)
                                 {
-                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json";
+                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                                     var productResponse = await _client.GetAsync(productUrl);
                                     if (productResponse.IsSuccessStatusCode)
                                     {
@@ -2165,6 +2382,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             return new OkObjectResult(allOrders);
                         }
                         break;
+
 
 
                     default:
@@ -2199,7 +2417,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "create":
                         string newCouponId = "coupon_" + Guid.NewGuid().ToString();
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{newCouponId}.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{newCouponId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
                         content = new StringContent(JsonSerializer.Serialize(new
                         {
@@ -2226,7 +2444,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(couponRequest.CouponId))
                             return new BadRequestObjectResult("Coupon ID must be provided for view_by_id operation.");
 
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(couponUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2242,7 +2460,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         break;
 
                     case "view_all":
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(couponUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2258,7 +2476,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(couponRequest.CouponId))
                             return new BadRequestObjectResult("Coupon ID must be provided for update operation.");
 
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(couponUrl);
 
                         if (!response.IsSuccessStatusCode)
@@ -2300,7 +2518,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(couponRequest.CouponId))
                             return new BadRequestObjectResult("Coupon ID must be provided for delete operation.");
 
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons/{couponRequest.CouponId}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.DeleteAsync(couponUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2313,7 +2531,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         if (string.IsNullOrEmpty(couponRequest.Code))
                             return new BadRequestObjectResult("Coupon code must be provided for validation.");
 
-                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json";
+                        couponUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/coupons.json?auth={FirebaseContext.FirebaseAuthKey}";
                         response = await _client.GetAsync(couponUrl);
 
                         if (response.IsSuccessStatusCode)
@@ -2349,6 +2567,272 @@ namespace FirebaseApiMain.Infrastructure.Services
             catch (Exception ex)
             {
                 return new StatusCodeResult(500);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        public async Task SendOrderConfirmationEmail(string customerEmail, string newOrderId, string customerName, string deliveryAddress, string mobileNumber, Order newOrder)
+        {
+            string smtpServer = "smtp.gmail.com";
+            int smtpPort = 587;
+            string smtpUsername = "facebookfire96@gmail.com";
+            string smtpPassword = "pbml emow qhsk oaws";
+            string fromEmail = "facebookfire96@gmail.com";
+
+            // Create the HTML email content with CSS styling and order summary
+            string htmlBody = $@"
+<html>
+<head>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }}
+        .header {{
+            text-align: center;
+            background-color: #4caf50;
+            padding: 20px;
+            color: #ffffff;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }}
+        .header img {{
+            width: 50px;
+            height: 50px;
+        }}
+        .content {{
+            padding: 20px;
+        }}
+        .content h2 {{
+            color: #4caf50;
+        }}
+        .order-details {{
+            margin-top: 20px;
+            border-top: 1px solid #dddddd;
+            padding-top: 20px;
+        }}
+        .order-details table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        .order-details th, .order-details td {{
+            text-align: left;
+            padding: 10px;
+            border: 1px solid #dddddd;
+        }}
+        .footer {{
+            text-align: center;
+            padding: 10px;
+            background-color: #4caf50;
+            color: white;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <img src='https://img.icons8.com/ios-filled/50/ffffff/checkmark.png' alt='Order Confirmed' />
+            <h1>Order Confirmed!</h1>
+        </div>
+        <div class='content'>
+            <h2>Thank you for your order, {customerName}!</h2>
+            <p>Your order <strong>#{newOrderId}</strong> has been successfully placed.</p>
+            
+            <div class='order-details'>
+                <h3>Delivery Information</h3>
+                <table>
+                    <tr>
+                        <th>Customer Name</th>
+                        <td>{customerName}</td>
+                    </tr>
+                    <tr>
+                        <th>Delivery Address</th>
+                        <td>{deliveryAddress}</td>
+                    </tr>
+                    <tr>
+                        <th>Mobile Number</th>
+                        <td>{mobileNumber}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class='order-details'>
+                <h3>Order Summary</h3>
+                <table>
+                    <tr><th>Subtotal</th><td>{newOrder.SubTotal:C}</td></tr>
+                    <tr><th>Discount</th><td>{newOrder.Discount:C}</td></tr>
+                    <tr><th>Tax</th><td>{newOrder.Tax:C}</td></tr>
+                    <tr><th>Delivery Charges</th><td>{newOrder.DeliveryCharges:C}</td></tr>
+                    <tr><th>Total Amount</th><td>{newOrder.TotalAmount:C}</td></tr>
+                    <tr><th>Status</th><td>{newOrder.Status}</td></tr>
+                </table>
+            </div>
+
+            <div class='footer'>
+                <p>We hope to see you again soon!</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+
+            // Compose the email
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(fromEmail),
+                Subject = "Order Confirmation",
+                Body = htmlBody,
+                IsBodyHtml = true, // Set to true to use HTML content
+            };
+
+            mailMessage.To.Add(customerEmail);
+
+            try
+            {
+                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
+                {
+                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                    smtpClient.EnableSsl = true; // Set to true if your SMTP server requires SSL
+                    await smtpClient.SendMailAsync(mailMessage);
+                }
+
+                Console.WriteLine("Order confirmation email sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
+            }
+        }
+
+
+        public async Task SendAdminNotificationEmail(string adminEmail, string newOrderId, string customerName, string customerEmail, string deliveryAddress, string mobileNumber, Order newOrder)
+        {
+            string smtpServer = "smtp.gmail.com";
+            int smtpPort = 587;
+            string smtpUsername = "facebookfire96@gmail.com";
+            string smtpPassword = "pbml emow qhsk oaws";
+            string fromEmail = "facebookfire96@gmail.com";
+
+            // Create the HTML email content with CSS styling
+            string htmlBody = $@"
+    <html>
+    <head>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 50px auto;
+                background-color: #ffffff;
+                padding: 20px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }}
+            .header {{
+                background-color: #ff9800;
+                color: white;
+                text-align: center;
+                padding: 10px;
+                border-radius: 10px 10px 0 0;
+            }}
+            .content {{
+                padding: 20px;
+            }}
+            .order-details, .customer-details {{
+                margin-top: 20px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>New Order Received</h1>
+            </div>
+            <div class='content'>
+                <h2>Order ID: {newOrderId}</h2>
+                <div class='customer-details'>
+                    <h3>Customer Information</h3>
+                    <table>
+                        <tr><th>Name</th><td>{customerName}</td></tr>
+                        <tr><th>Email</th><td>{customerEmail}</td></tr>
+                        <tr><th>Mobile Number</th><td>{mobileNumber}</td></tr>
+                        <tr><th>Delivery Address</th><td>{deliveryAddress}</td></tr>
+                    </table>
+                </div>
+                <div class='order-details'>
+                    <h3>Order Summary</h3>
+                    <table>
+                        <tr><th>Subtotal</th><td>{newOrder.SubTotal:C}</td></tr>
+                        <tr><th>Discount</th><td>{newOrder.Discount:C}</td></tr>
+                        <tr><th>Tax</th><td>{newOrder.Tax:C}</td></tr>
+                        <tr><th>Delivery Charges</th><td>{newOrder.DeliveryCharges:C}</td></tr>
+                        <tr><th>Total Amount</th><td>{newOrder.TotalAmount:C}</td></tr>
+                        <tr><th>Status</th><td>{newOrder.Status}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>";
+
+            // Compose the email
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(fromEmail),
+                Subject = "New Order Placed",
+                Body = htmlBody,
+                IsBodyHtml = true, // Set to true to use HTML content
+            };
+
+            mailMessage.To.Add(adminEmail);
+
+            try
+            {
+                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
+                {
+                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                    smtpClient.EnableSsl = true; // Enable SSL
+                    await smtpClient.SendMailAsync(mailMessage); // Send the email
+                }
+
+                Console.WriteLine("Admin notification email sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while sending the email: {ex.Message}");
             }
         }
 

@@ -20,6 +20,8 @@
         public string?  PaymentMethod { get; set; } // COD, Online
         public string ? CouponCode { get; set; }
         public decimal ? Discount { get; set; }
+
+        public CustomerRequest CustomerDetails { get; set; } // Add this line
     }
 
     public class Item
@@ -30,5 +32,8 @@
         public decimal ?  TotalPrice { get; set; }
         public ProductDetails ? ProductDetails { get; set; }
     }
+
+
+
 
 }
