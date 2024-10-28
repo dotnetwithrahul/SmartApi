@@ -2024,6 +2024,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 var productData = await productResponse.Content.ReadAsStringAsync();
                                 var product = JsonSerializer.Deserialize<Product>(productData);
 
+                                item.ProductName = product.name;
                                 decimal productAmount = product.Amount ?? 0m;  // Safely handling nullable decimal
                                 item.UnitPrice = productAmount;
                                 item.TotalPrice = productAmount * item.Quantity ?? 0m;  // Ensure TotalPrice is a non-nullable decimal
@@ -2646,16 +2647,16 @@ namespace FirebaseApiMain.Infrastructure.Services
         .content h2 {{
             color: #4caf50;
         }}
-        .order-details {{
+        .order-details, .summary-details {{
             margin-top: 20px;
             border-top: 1px solid #dddddd;
             padding-top: 20px;
         }}
-        .order-details table {{
+        table {{
             width: 100%;
             border-collapse: collapse;
         }}
-        .order-details th, .order-details td {{
+        th, td {{
             text-align: left;
             padding: 10px;
             border: 1px solid #dddddd;
@@ -2683,22 +2684,34 @@ namespace FirebaseApiMain.Infrastructure.Services
             <div class='order-details'>
                 <h3>Delivery Information</h3>
                 <table>
-                    <tr>
-                        <th>Customer Name</th>
-                        <td>{customerName}</td>
-                    </tr>
-                    <tr>
-                        <th>Delivery Address</th>
-                        <td>{deliveryAddress}</td>
-                    </tr>
-                    <tr>
-                        <th>Mobile Number</th>
-                        <td>{mobileNumber}</td>
-                    </tr>
+                    <tr><th>Customer Name</th><td>{customerName}</td></tr>
+                    <tr><th>Delivery Address</th><td>{deliveryAddress}</td></tr>
+                    <tr><th>Mobile Number</th><td>{mobileNumber}</td></tr>
                 </table>
             </div>
 
             <div class='order-details'>
+                <h3>Order Items</h3>
+                <table>
+                    <tr><th>Product Name</th><th>Unit Price</th><th>Quantity</th><th>Total Price</th></tr>";
+
+            foreach (var item in newOrder.Items)
+            {
+                htmlBody += $@"
+                    <tr>
+                        <td>{item.ProductName}</td>
+                        <td>{item.UnitPrice:C}</td>
+                        <td>{item.Quantity}</td>
+                        <td>{item.TotalPrice:C}</td>
+                    </tr>";
+            }
+
+            // Separate table for final summary and calculations
+            htmlBody += $@"
+                </table>
+            </div>
+
+            <div class='summary-details'>
                 <h3>Order Summary</h3>
                 <table>
                     <tr><th>Subtotal</th><td>{newOrder.SubTotal:C}</td></tr>
@@ -2717,6 +2730,8 @@ namespace FirebaseApiMain.Infrastructure.Services
     </div>
 </body>
 </html>";
+
+
 
             // Compose the email
             var mailMessage = new MailMessage
@@ -2755,7 +2770,6 @@ namespace FirebaseApiMain.Infrastructure.Services
             string smtpPassword = "pbml emow qhsk oaws";
             string fromEmail = "facebookfire96@gmail.com";
 
-            // Create the HTML email content with CSS styling
             string htmlBody = $@"
     <html>
     <head>
@@ -2816,6 +2830,24 @@ namespace FirebaseApiMain.Infrastructure.Services
                 <div class='order-details'>
                     <h3>Order Summary</h3>
                     <table>
+                        <tr><th>Product Name</th><th>Unit Price</th><th>Quantity</th><th>Total Price</th></tr>";
+
+            foreach (var item in newOrder.Items)
+            {
+                htmlBody += $@"
+                        <tr>
+                            <td>{item.ProductName}</td>
+                            <td>{item.UnitPrice:C}</td>
+                            <td>{item.Quantity}</td>
+                            <td>{item.TotalPrice:C}</td>
+                        </tr>";
+            }
+
+            // Separate table for final amounts
+            htmlBody += $@"
+                    </table>
+                    <br>
+                    <table>
                         <tr><th>Subtotal</th><td>{newOrder.SubTotal:C}</td></tr>
                         <tr><th>Discount</th><td>{newOrder.Discount:C}</td></tr>
                         <tr><th>Tax</th><td>{newOrder.Tax:C}</td></tr>
@@ -2829,15 +2861,40 @@ namespace FirebaseApiMain.Infrastructure.Services
     </body>
     </html>";
 
-            // Compose the email
+            foreach (var item in newOrder.Items)
+            {
+                htmlBody += $@"
+                        <tr>
+                            <td>{item.ProductName}</td>
+                            <td>{item.UnitPrice:C}</td>
+                            <td>{item.Quantity}</td>
+                            <td>{item.TotalPrice:C}</td>
+                        </tr>";
+            }
+
+            htmlBody += $@"
+
+
+                        <tr><th>Subtotal</th><td>{newOrder.SubTotal:C}</td></tr>
+                        <tr><th>Discount</th><td>{newOrder.Discount:C}</td></tr>
+                        <tr><th>Tax</th><td>{newOrder.Tax:C}</td></tr>
+                        <tr><th>Delivery Charges</th><td>{newOrder.DeliveryCharges:C}</td></tr>
+                        <tr><th>Total Amount</th><td>{newOrder.TotalAmount:C}</td></tr>
+                        <tr><th>Status</th><td>{newOrder.Status}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>";
+
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(fromEmail),
                 Subject = "New Order Placed",
                 Body = htmlBody,
-                IsBodyHtml = true, // Set to true to use HTML content
+                IsBodyHtml = true,
             };
-
             mailMessage.To.Add(adminEmail);
 
             try
@@ -2845,8 +2902,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                 using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
                 {
                     smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
-                    smtpClient.EnableSsl = true; // Enable SSL
-                    await smtpClient.SendMailAsync(mailMessage); // Send the email
+                    smtpClient.EnableSsl = true;
+                    await smtpClient.SendMailAsync(mailMessage);
                 }
 
                 Console.WriteLine("Admin notification email sent successfully.");
