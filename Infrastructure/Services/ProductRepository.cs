@@ -1947,7 +1947,7 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                         if (!response.IsSuccessStatusCode)
                         {
-                            return new NotFoundObjectResult("Cart item not found.");
+                            return new NotFoundObjectResult("No Iteams in Cart.");
                         }
 
                         var cartData = await response.Content.ReadAsStringAsync();
@@ -2124,7 +2124,28 @@ namespace FirebaseApiMain.Infrastructure.Services
                                     }
                                 });
 
-                                return result = new OkObjectResult(new
+                                string cartFetchUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts.json?orderBy=%22CustomerId%22&equalTo=%22{orderRequest.CustomerId}%22&auth={FirebaseContext.FirebaseAuthKey}";
+                                var cartFetchResponse = await _client.GetAsync(cartFetchUrl);
+
+                                if (cartFetchResponse.IsSuccessStatusCode)
+                                {
+                                    var cartData = await cartFetchResponse.Content.ReadAsStringAsync();
+                                    var cartItems = JsonSerializer.Deserialize<Dictionary<string, CartRequest>>(cartData);
+
+                                    if (cartItems != null)
+                                    {
+                                        // Step 2: Delete each cart item individually
+                                        foreach (var cartItem in cartItems)
+                                        {
+                                            string cartItemDeleteUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/carts/{cartItem.Key}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                            await _client.DeleteAsync(cartItemDeleteUrl);
+                                        }
+
+                                        Console.WriteLine("Customer cart cleared.");
+                                    }
+
+                                }
+                                    return result = new OkObjectResult(new
                                 {
                                     Message = "Order Placed  successfully.",
                                     OrderDetails = newOrder  // Contains the order and customer information together
