@@ -33,7 +33,7 @@ namespace FirebaseApiMain.Infrastructure.Services
         private readonly IMemoryCache _cache;
         private const string OtpCacheKeyPrefix = "Otp_";
         private const int OtpExpiryMinutes = 2; // OTP validity duration in m
-        public ProductRepository(HttpClient client, IMemoryCache cache , IFileService _fileService)
+        public ProductRepository(HttpClient client, IMemoryCache cache, IFileService _fileService)
         {
             _client = client;
             _cache = cache;
@@ -736,7 +736,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     string post_data = JsonSerializer.Serialize(requestBody);
 
 
-                   
+
 
                     string url = "https://securegw-stage.paytm.in/theia/api/v1/initiateTransaction?mid=" + paytmMerchantId + "&orderId=" + orderId;
 
@@ -1107,7 +1107,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                 {
                     case "create":
                         string newCategoryId = "cat_" + Guid.NewGuid().ToString();
-                       
+
                         otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps/{otpRequest.email}.json?auth={FirebaseContext.FirebaseAuthKey}";
                         //string[] allowedFileExtentions = [".jpg", ".jpeg", ".png"];
                         //string imageUrl = await fileService.SaveFileAsync(categoryRequest.imageFile, new[] { ".jpg", ".jpeg", ".png" }, newCategoryId);
@@ -1129,7 +1129,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         }
                         break;
 
-                
+
 
                     case "view_all":
                         otpUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/otps.json?auth={FirebaseContext.FirebaseAuthKey}";
@@ -1149,7 +1149,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                         }
                         break;
 
-              
+
 
                     default:
                         return new BadRequestObjectResult("Invalid flag. Valid flags are 'create', 'view_all', 'view_by_id', 'update', and 'delete'.");
@@ -1458,7 +1458,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                             var allCustomersData = await response.Content.ReadAsStringAsync();
                             var allCustomers = JsonSerializer.Deserialize<Dictionary<string, CustomerRequest>>(allCustomersData);
 
-                           
+
                             if (allCustomers != null && allCustomers.Values.Any(c => c.email == customerRequest.email))
                             {
                                 return new BadRequestObjectResult("Already registered with this email. Go to Login");
@@ -2010,6 +2010,12 @@ namespace FirebaseApiMain.Infrastructure.Services
                 switch (orderRequest.Flag.ToLower())
                 {
                     case "create":
+
+                        if (orderRequest.Items == null || !orderRequest.Items.Any() || orderRequest.Items.Any(item => string.IsNullOrEmpty(item.ProductId) || item.Quantity <= 0))
+                        {
+                            return new BadRequestObjectResult("Invalid order request. Each item must have a valid Product ID and a quantity greater than 0.");
+                        }
+
                         string newOrderId = "order_" + Guid.NewGuid().ToString();
                         orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders/{newOrderId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
@@ -2022,7 +2028,13 @@ namespace FirebaseApiMain.Infrastructure.Services
                             if (productResponse.IsSuccessStatusCode)
                             {
                                 var productData = await productResponse.Content.ReadAsStringAsync();
+                                if (productData == "null" || string.IsNullOrWhiteSpace(productData))
+                                {
+                                    return new BadRequestObjectResult($"Invalid Product ID: {item.ProductId}");
+                                }
+
                                 var product = JsonSerializer.Deserialize<Product>(productData);
+
 
                                 item.ProductName = product.name;
                                 decimal productAmount = product.Amount ?? 0m;  // Safely handling nullable decimal
@@ -2030,6 +2042,28 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 item.TotalPrice = productAmount * item.Quantity ?? 0m;  // Ensure TotalPrice is a non-nullable decimal
                                 subTotal += item.TotalPrice ?? 0m;  // Add non-nullable decimal value to subTotal
                             }
+                           
+                        }
+
+                        string customerUrl1 = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{orderRequest.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                        var customerResponse1 = await _client.GetAsync(customerUrl1);
+
+                        // Check if the response status is successful
+                        if (customerResponse1.IsSuccessStatusCode)
+                        {
+                            var customerData = await customerResponse1.Content.ReadAsStringAsync();
+                            // Deserialize and check if the result is an empty object
+                            var customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+
+                            // If customer is null or all properties are default (indicating an invalid ID), return an error
+                            if (customer == null )
+                            {
+                                return new BadRequestObjectResult($"Invalid Customer ID: {orderRequest.CustomerId}");
+                            }
+                        }
+                        else
+                        {
+                            return new BadRequestObjectResult($"Invalid Customer ID: {orderRequest.CustomerId}");
                         }
 
                         // Handle coupon code if provided
@@ -2146,7 +2180,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                                     }
 
                                 }
-                                    return result = new OkObjectResult(new
+                                return result = new OkObjectResult(new
                                 {
                                     Message = "Order Placed  successfully.",
                                     OrderDetails = newOrder  // Contains the order and customer information together
@@ -2254,59 +2288,73 @@ namespace FirebaseApiMain.Infrastructure.Services
                             }
 
                             var order = JsonSerializer.Deserialize<Order>(orderDetails);
+                            if (order == null) // Ensure order object is not null after deserialization
+                                return new NotFoundObjectResult("Order not found.");
 
-                            // Fetch product details
-                            foreach (var item in order.Items)
+                            // Fetch product details for each item, if items exist
+                            if (order.Items != null)
                             {
-                                string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
-                                var productResponse = await _client.GetAsync(productUrl);
-                                if (productResponse.IsSuccessStatusCode)
+                                foreach (var item in order.Items)
                                 {
-                                    var productData = await productResponse.Content.ReadAsStringAsync();
-                                    var product = JsonSerializer.Deserialize<Product>(productData);
-
-                                    // Add product details to the item
-                                    item.ProductDetails = new ProductDetails
+                                    if (!string.IsNullOrEmpty(item.ProductId)) // Ensure ProductId is not null or empty
                                     {
-                                        Id = product.Id,
-                                        Name = product.name,
-                                        ShortDescription = product.ShortDescription,
-                                        Amount = product.Amount ?? 0m,
-                                        Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
-                                        ImageUrl = product.image_url,
-                                        IsOutOfStock = product.IsOutOfStock ?? false
-                                    };
+                                        string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                        var productResponse = await _client.GetAsync(productUrl);
+                                        if (productResponse.IsSuccessStatusCode)
+                                        {
+                                            var productData = await productResponse.Content.ReadAsStringAsync();
+                                            var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                            // Populate ProductDetails with null-handling
+                                            if (product != null)
+                                            {
+                                                item.ProductDetails = new ProductDetails
+                                                {
+                                                    Id = product.Id,
+                                                    Name = product.name ?? string.Empty,
+                                                    ShortDescription = product.ShortDescription ?? string.Empty,
+                                                    Amount = product.Amount ?? 0m,
+                                                    Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                                    ImageUrl = product.image_url ?? string.Empty,
+                                                    IsOutOfStock = product.IsOutOfStock ?? false
+                                                };
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
-                            // Fetch customer details
-                            string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
-                            var customerResponse = await _client.GetAsync(customerUrl);
-                            if (customerResponse.IsSuccessStatusCode)
+                            // Fetch customer details if CustomerId is present
+                            if (!string.IsNullOrEmpty(order.CustomerId))
                             {
-                                var customerData = await customerResponse.Content.ReadAsStringAsync();
-                                var customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+                                string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                var customerResponse = await _client.GetAsync(customerUrl);
+                                if (customerResponse.IsSuccessStatusCode)
+                                {
+                                    var customerData = await customerResponse.Content.ReadAsStringAsync();
+                                    var customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
 
-                                // Add customer details to the order
-                                order.CustomerDetails = customer; // Directly assign customer details
+                                    // Assign customer details if available
+                                    order.CustomerDetails = customer ?? new CustomerRequest(); // Assign an empty CustomerRequest if null
+                                }
                             }
 
                             return new OkObjectResult(order);
                         }
-                        break;
+
+                        break; // Added break statement
 
                     case "view_by_customerid":
                         if (string.IsNullOrEmpty(orderRequest.CustomerId))
                             return new BadRequestObjectResult("Customer ID must be provided for view_by_customerid operation.");
 
                         orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?orderBy=%22CustomerId%22&equalTo=%22{orderRequest.CustomerId}%22&auth={FirebaseContext.FirebaseAuthKey}";
-
                         response = await _client.GetAsync(orderUrl);
 
                         if (response.IsSuccessStatusCode)
                         {
                             var customerOrdersData = await response.Content.ReadAsStringAsync();
-                            var customerOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(customerOrdersData);
+                            var customerOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(customerOrdersData) ?? new Dictionary<string, Order>();
 
                             // Fetch customer details for the provided CustomerId
                             string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{orderRequest.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
@@ -2319,33 +2367,47 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
                             }
 
-                            // Add customer details to each order
+                            // Iterate over each order and add customer details and product details if available
                             foreach (var order in customerOrders.Values)
                             {
-                                order.CustomerDetails = customer; // Directly assign customer details to each order
-                                foreach (var item in order.Items)
-                                {
-                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
-                                    var productResponse = await _client.GetAsync(productUrl);
-                                    if (productResponse.IsSuccessStatusCode)
-                                    {
-                                        var productData = await productResponse.Content.ReadAsStringAsync();
-                                        var product = JsonSerializer.Deserialize<Product>(productData);
+                                // Safely assign customer details to each order
+                                order.CustomerDetails = customer;
 
-                                        // Add product details to the item
-                                        item.ProductDetails = new ProductDetails
+                                if (order.Items != null) // Ensure Items list is not null before looping
+                                {
+                                    foreach (var item in order.Items)
+                                    {
+                                        string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                        var productResponse = await _client.GetAsync(productUrl);
+
+                                        if (productResponse.IsSuccessStatusCode)
                                         {
-                                            Id = product.Id,
-                                            Name = product.name,
-                                            ShortDescription = product.ShortDescription,
-                                            Amount = product.Amount ?? 0m,
-                                            Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
-                                            ImageUrl = product.image_url,
-                                            IsOutOfStock = product.IsOutOfStock ?? false
-                                        };
+                                            var productData = await productResponse.Content.ReadAsStringAsync();
+                                            var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                            // Add product details to the item with null handling
+                                            if (product != null)
+                                            {
+                                                item.ProductDetails = new ProductDetails
+                                                {
+                                                    Id = product.Id,
+                                                    Name = product.name ?? string.Empty,
+                                                    ShortDescription = product.ShortDescription ?? string.Empty,
+                                                    Amount = product.Amount ?? 0m,
+                                                    Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                                    ImageUrl = product.image_url ?? string.Empty,
+                                                    IsOutOfStock = product.IsOutOfStock ?? false
+                                                };
+                                            }
+                                        }
                                     }
                                 }
                             }
+
+                            var sortedOrders = customerOrders.Values
+             .OrderByDescending(o => o.OrderPlacedDate ?? DateTime.MinValue)
+             .ToDictionary(order => order.OrderId); // Convert back to dictionary
+
 
                             return new OkObjectResult(customerOrders);
                         }
