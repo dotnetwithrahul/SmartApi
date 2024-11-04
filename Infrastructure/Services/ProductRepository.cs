@@ -180,6 +180,10 @@ namespace FirebaseApiMain.Infrastructure.Services
                 // Prepare the product URL in Firebase
                 productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{newProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
 
+                if (productRequest.IsOutOfStock == null)
+                {
+                    productRequest.IsOutOfStock = false;
+                }
                 // Serialize the product details to be stored in Firebase
                 content = new StringContent(JsonSerializer.Serialize(new
                 {
@@ -190,7 +194,7 @@ namespace FirebaseApiMain.Infrastructure.Services
                     productRequest.Weight,
                     productRequest.WeightUnit,
                     productRequest.StockQuantity,
-                    productRequest.IsOutOfStock,
+                    productRequest.IsOutOfStock  ,
                     productRequest.RestockDate,
                     productRequest.Discount,
                     productRequest.Amount,
@@ -2040,7 +2044,24 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 decimal productAmount = product.Amount ?? 0m;  // Safely handling nullable decimal
                                 item.UnitPrice = productAmount;
                                 item.TotalPrice = productAmount * item.Quantity ?? 0m;  // Ensure TotalPrice is a non-nullable decimal
-                                subTotal += item.TotalPrice ?? 0m;  // Add non-nullable decimal value to subTotal
+                                subTotal += item.TotalPrice ?? 0m;
+
+
+                                product.StockQuantity = (product.StockQuantity ?? 0) - item.Quantity;
+                                if (product.StockQuantity <= 0)
+                                {
+                                    product.StockQuantity = 0;
+                                    product.IsOutOfStock = true;
+                                }
+
+                                // Update the product in Firebase
+                                var updatedProductContent = new StringContent(JsonSerializer.Serialize(product), Encoding.UTF8, "application/json");
+                                var updateProductResponse = await _client.PutAsync(productUrl, updatedProductContent);
+
+                                if (!updateProductResponse.IsSuccessStatusCode)
+                                {
+                                    return new BadRequestObjectResult($"Failed to update stock for Product ID: {item.ProductId}");
+                                }
                             }
                            
                         }
@@ -2221,10 +2242,57 @@ namespace FirebaseApiMain.Infrastructure.Services
                         // Update the status, dates, and additional fields
                         switch (status)
                         {
+
                             case "cancel":
+                                // Check if the order is already canceled
+                                if (existingOrder.Status == "Cancelled")
+                                {
+                                    return new BadRequestObjectResult("Order is already canceled.");
+                                }
+
+                                // Set the order status to "Cancelled" and record the cancellation date
                                 existingOrder.Status = "Cancelled";
                                 existingOrder.CancelledDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+
+                                // Loop through each item in the order to add the quantity back to stock
+                                foreach (var item in existingOrder.Items)
+                                {
+                                    // Fetch the current product details
+                                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                                    var productResponse = await _client.GetAsync(productUrl);
+
+                                    if (productResponse.IsSuccessStatusCode)
+                                    {
+                                        var productData = await productResponse.Content.ReadAsStringAsync();
+                                        var product = JsonSerializer.Deserialize<Product>(productData);
+
+                                        // Check if the product exists and has a StockQuantity
+                                        if (product != null && product.StockQuantity.HasValue)
+                                        {
+                                            // Add the ordered quantity back to the stock
+                                            product.StockQuantity += item.Quantity;
+
+                                            // Update the IsOutOfStock flag if stock is now available
+                                            if (product.StockQuantity > 0)
+                                            {
+                                                product.IsOutOfStock = false;
+                                            }
+
+                                            // Update only StockQuantity and IsOutOfStock, without changing other fields
+                                            var partialUpdate = new
+                                            {
+                                                StockQuantity = product.StockQuantity,
+                                                IsOutOfStock = product.IsOutOfStock
+                                            };
+
+                                            var updatedProductContent = new StringContent(JsonSerializer.Serialize(partialUpdate), Encoding.UTF8, "application/json");
+                                            await _client.PatchAsync(productUrl, updatedProductContent); // Use PATCH to avoid overwriting other fields
+                                        }
+                                    }
+                                }
+
                                 break;
+
 
                             case "dispatched":
                                 existingOrder.Status = "Dispatched";
@@ -2236,8 +2304,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                                 }
                                 break;
 
-                            case "out_for_delivery":
-                                existingOrder.Status = "OutForDelivery";
+                            case "on_the_way":
+                                existingOrder.Status = "On the way";
                                 // Additional handling can be done here if needed
                                 break;
 
