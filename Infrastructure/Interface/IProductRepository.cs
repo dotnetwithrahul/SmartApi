@@ -41,6 +41,8 @@ namespace FirebaseApiMain.Infrastructure.Interface
         Task<IActionResult> ManageCouponAsync(CouponRequest couponRequest);
 
 
+        Task<IActionResult> GetAdminOrders(string pageNumber = "1", string pageSize = "10");
+
         /// <summary>
         /// Fetches a product by its unique ID.
         /// </summary>

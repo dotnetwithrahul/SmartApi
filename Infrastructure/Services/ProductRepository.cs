@@ -2554,6 +2554,75 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
+        public async Task<IActionResult> GetAdminOrders(string pageNumber, string pageSize )
+        {
+            int page = int.TryParse(pageNumber, out var parsedPage) ? parsedPage : 1;
+                int size = int.TryParse(pageSize, out var parsedSize) ? parsedSize : 10;
+
+            // Calculate the starting point for pagination (skip previous pages)
+            var startAtKey = (page - 1) * size;
+
+            string orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?auth={FirebaseContext.FirebaseAuthKey}&orderBy=\"$key\"&limitToFirst={size}";
+
+            var response = await _client.GetAsync(orderUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var allOrdersData = await response.Content.ReadAsStringAsync();
+                var allOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(allOrdersData);
+
+                // Fetch customer and product details as you did before
+                foreach (var order in allOrders.Values)
+                {
+                    // Fetch customer details for each order
+                    string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                    var customerResponse = await _client.GetAsync(customerUrl);
+                    CustomerRequest customer = null;
+
+                    if (customerResponse.IsSuccessStatusCode)
+                    {
+                        var customerData = await customerResponse.Content.ReadAsStringAsync();
+                        customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+                    }
+
+                    // Add customer details to the order
+                    order.CustomerDetails = customer;
+
+                    // Fetch product details for each item
+                    foreach (var item in order.Items)
+                    {
+                        string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                        var productResponse = await _client.GetAsync(productUrl);
+                        if (productResponse.IsSuccessStatusCode)
+                        {
+                            var productData = await productResponse.Content.ReadAsStringAsync();
+                            var product = JsonSerializer.Deserialize<Product>(productData);
+
+                            // Add product details to the item
+                            item.ProductDetails = new ProductDetails
+                            {
+                                Id = product.Id,
+                                Name = product.name,
+                                ShortDescription = product.ShortDescription,
+                                Amount = product.Amount ?? 0m,
+                                Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                                ImageUrl = product.image_url,
+                                IsOutOfStock = product.IsOutOfStock ?? false
+                            };
+                        }
+                    }
+                }
+
+                // Return the paginated orders
+                return new OkObjectResult(allOrders);
+            }
+
+            return new StatusCodeResult(500); // In case of failure
+        }
+
+
+
+
 
 
 
