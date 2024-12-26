@@ -10,6 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="FirebaseApiMain.AppHost\**" />
+    <Compile Remove="FirebaseApiMain.ServiceDefaults\**" />
+    <Content Remove="FirebaseApiMain.AppHost\**" />
+    <Content Remove="FirebaseApiMain.ServiceDefaults\**" />
+    <EmbeddedResource Remove="FirebaseApiMain.AppHost\**" />
+    <EmbeddedResource Remove="FirebaseApiMain.ServiceDefaults\**" />
+    <None Remove="FirebaseApiMain.AppHost\**" />
+    <None Remove="FirebaseApiMain.ServiceDefaults\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net" Version="0.1.0" />
     <PackageReference Include="FirebaseStorage.net" Version="1.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
