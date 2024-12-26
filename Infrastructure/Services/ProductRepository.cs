@@ -209,6 +209,8 @@ namespace FirebaseApiMain.Infrastructure.Services
 
                 if (response.IsSuccessStatusCode)
                 {
+                    _cache.Remove("CachedProducts");
+
                     result = true; // Indicate success if the response is successful
                 }
             }
@@ -478,6 +480,83 @@ namespace FirebaseApiMain.Infrastructure.Services
                 return new StatusCodeResult(500);
             }
         }
+
+
+
+
+
+
+        public async Task<IActionResult> GetAdminProducts(int page, int pageSize)
+        {
+            // Validate page and pageSize to ensure they're positive numbers
+            if (page <= 0 || pageSize <= 0)
+            {
+                return new BadRequestObjectResult(new { message = "Page and pageSize must be greater than 0." });
+            }
+
+            string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products.json?auth={FirebaseContext.FirebaseAuthKey}";
+
+            // Check cache for products
+            const string CacheKey = "CachedProducts";
+            List<Product> allProducts;
+
+            if (_cache.TryGetValue(CacheKey, out List<Product> cachedProducts))
+            {
+                allProducts = cachedProducts;
+            }
+            else
+            {
+                var response = await _client.GetAsync(productUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new StatusCodeResult((int)response.StatusCode);
+                }
+
+                var allProductsData = await response.Content.ReadAsStringAsync();
+                var allProductsDict = JsonSerializer.Deserialize<Dictionary<string, Product>>(allProductsData);
+
+                allProducts = allProductsDict.Values.ToList();
+
+                // Cache products for 10 minutes
+                _cache.Set(CacheKey, allProducts, TimeSpan.FromMinutes(10));
+            }
+
+            // Paginate the results
+            var paginatedProducts = allProducts.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return new OkObjectResult(new { products = paginatedProducts, totalCount = allProducts.Count });
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         public async Task<bool> UpdateProductAsync(ProductImageRequest productRequest)
@@ -2554,70 +2633,98 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
-        public async Task<IActionResult> GetAdminOrders(string pageNumber, string pageSize )
+        public async Task<IActionResult> GetAdminOrders(string pageNumber, string pageSize)
         {
+            // Parse pagination parameters
             int page = int.TryParse(pageNumber, out var parsedPage) ? parsedPage : 1;
-                int size = int.TryParse(pageSize, out var parsedSize) ? parsedSize : 10;
+            int size = int.TryParse(pageSize, out var parsedSize) ? parsedSize : 10;
 
-            // Calculate the starting point for pagination (skip previous pages)
-            var startAtKey = (page - 1) * size;
+            // Calculate the starting point for pagination
+            int startAtKey = (page - 1) * size;
 
-            string orderUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?auth={FirebaseContext.FirebaseAuthKey}&orderBy=\"$key\"&limitToFirst={size}";
+            // Fetch all orders to calculate total count
+            string allOrdersUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/orders.json?auth={FirebaseContext.FirebaseAuthKey}";
+            var allOrdersResponse = await _client.GetAsync(allOrdersUrl);
 
-            var response = await _client.GetAsync(orderUrl);
-
-            if (response.IsSuccessStatusCode)
+            if (!allOrdersResponse.IsSuccessStatusCode)
             {
-                var allOrdersData = await response.Content.ReadAsStringAsync();
-                var allOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(allOrdersData);
-
-                // Fetch customer and product details as you did before
-                foreach (var order in allOrders.Values)
-                {
-                    // Fetch customer details for each order
-                    string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
-                    var customerResponse = await _client.GetAsync(customerUrl);
-                    CustomerRequest customer = null;
-
-                    if (customerResponse.IsSuccessStatusCode)
-                    {
-                        var customerData = await customerResponse.Content.ReadAsStringAsync();
-                        customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
-                    }
-
-                    // Add customer details to the order
-                    order.CustomerDetails = customer;
-
-                    // Fetch product details for each item
-                    foreach (var item in order.Items)
-                    {
-                        string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
-                        var productResponse = await _client.GetAsync(productUrl);
-                        if (productResponse.IsSuccessStatusCode)
-                        {
-                            var productData = await productResponse.Content.ReadAsStringAsync();
-                            var product = JsonSerializer.Deserialize<Product>(productData);
-
-                            // Add product details to the item
-                            item.ProductDetails = new ProductDetails
-                            {
-                                Id = product.Id,
-                                Name = product.name,
-                                ShortDescription = product.ShortDescription,
-                                Amount = product.Amount ?? 0m,
-                                Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
-                                ImageUrl = product.image_url,
-                                IsOutOfStock = product.IsOutOfStock ?? false
-                            };
-                        }
-                    }
-                }
-
-                // Return the paginated orders
-                return new OkObjectResult(allOrders);
+                return new StatusCodeResult(500); // Handle API failure
             }
 
-            return new StatusCodeResult(500); // In case of failure
+            var allOrdersData = await allOrdersResponse.Content.ReadAsStringAsync();
+            var allOrders = JsonSerializer.Deserialize<Dictionary<string, Order>>(allOrdersData);
+
+            if (allOrders == null || !allOrders.Any())
+            {
+                return new OkObjectResult(new
+                {
+                    totalCount = 0,
+                    orders = new List<Order>()
+                });
+            }
+
+            // Get total count for pagination
+            int totalCount = allOrders.Count;
+
+            // Apply pagination by slicing the data
+            var paginatedKeys = allOrders.Keys
+                .Skip(startAtKey)
+                .Take(size)
+                .ToList();
+
+            var paginatedOrders = new Dictionary<string, Order>();
+            foreach (var key in paginatedKeys)
+            {
+                paginatedOrders[key] = allOrders[key];
+            }
+
+            // Fetch additional details for orders
+            foreach (var order in paginatedOrders.Values)
+            {
+                // Fetch customer details
+                string customerUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/customers/{order.CustomerId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                var customerResponse = await _client.GetAsync(customerUrl);
+                CustomerRequest customer = null;
+
+                if (customerResponse.IsSuccessStatusCode)
+                {
+                    var customerData = await customerResponse.Content.ReadAsStringAsync();
+                    customer = JsonSerializer.Deserialize<CustomerRequest>(customerData);
+                }
+
+                order.CustomerDetails = customer;
+
+                // Fetch product details for each item
+                foreach (var item in order.Items)
+                {
+                    string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{item.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+                    var productResponse = await _client.GetAsync(productUrl);
+
+                    if (productResponse.IsSuccessStatusCode)
+                    {
+                        var productData = await productResponse.Content.ReadAsStringAsync();
+                        var product = JsonSerializer.Deserialize<Product>(productData);
+
+                        item.ProductDetails = new ProductDetails
+                        {
+                            Id = product.Id,
+                            Name = product.name,
+                            ShortDescription = product.ShortDescription,
+                            Amount = product.Amount ?? 0m,
+                            Rating = product.Rating.HasValue ? (decimal?)product.Rating.Value : null,
+                            ImageUrl = product.image_url,
+                            IsOutOfStock = product.IsOutOfStock ?? false
+                        };
+                    }
+                }
+            }
+
+            // Return paginated orders with total count
+            return new OkObjectResult(new
+            {
+                totalCount,
+                orders = paginatedOrders.Values.ToList()
+            });
         }
 
 

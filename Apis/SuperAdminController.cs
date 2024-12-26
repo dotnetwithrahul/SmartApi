@@ -35,7 +35,14 @@ namespace FirebaseApiMain.Apis
             return await _productRepository.GetAdminOrders(pageNumber, pageSize);
         }
 
+        [HttpPost("GetAdminProducts")]
+        public async Task<IActionResult> GetAdminProducts(int page, int pageSize)
+        {
+            return await _productRepository.GetAdminProducts(page, pageSize);
+        }
 
+
+        
 
 
 
