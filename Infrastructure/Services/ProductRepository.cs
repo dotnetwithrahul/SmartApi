@@ -371,6 +371,8 @@ namespace FirebaseApiMain.Infrastructure.Services
                             productRequest.ReviewCount
                         }), Encoding.UTF8, "application/json");
 
+                        _cache.Remove("CachedProducts");
+
                         response = await _client.PutAsync(productUrl, content);
 
                         if (response.IsSuccessStatusCode)
@@ -448,10 +450,13 @@ namespace FirebaseApiMain.Infrastructure.Services
                             image_url = productRequest.image_url ?? existingProduct.image_url,
                             categoryId = productRequest.categoryId ?? existingProduct.categoryId,
                             Rating = productRequest.Rating ?? existingProduct.Rating,
-                            ReviewCount = productRequest.ReviewCount ?? existingProduct.ReviewCount
+                            ReviewCount = productRequest.ReviewCount ?? existingProduct.ReviewCount,
+                            isremovedfromStore = productRequest.isremovedfromStore ?? existingProduct.isremovedfromStore
+
                         };
 
                         content = new StringContent(JsonSerializer.Serialize(updatedProduct), Encoding.UTF8, "application/json");
+                        _cache.Remove("CachedProducts");
 
                         // Send the update request
                         response = await _client.PatchAsync(productUrl, content);
@@ -570,8 +575,10 @@ namespace FirebaseApiMain.Infrastructure.Services
                 _cache.Set(CacheKey, allProducts, TimeSpan.FromMinutes(10));
             }
 
+            var filteredProducts = allProducts.Where(p => p.isremovedfromStore != true).ToList();
+
             // Paginate the results
-            var paginatedProducts = allProducts.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var paginatedProducts = filteredProducts.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             return new OkObjectResult(new { products = paginatedProducts, totalCount = allProducts.Count });
         }

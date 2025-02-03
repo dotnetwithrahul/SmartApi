@@ -27,6 +27,8 @@
         public double? Rating { get; set; }
         public int? ReviewCount { get; set; }
 
+        public bool ? isremovedfromStore { get; set; }
+
     }
 
 }

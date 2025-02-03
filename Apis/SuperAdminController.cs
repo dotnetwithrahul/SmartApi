@@ -51,6 +51,15 @@ namespace FirebaseApiMain.Apis
 
 
 
+        [HttpPost("ManageProductAsync")]
+        public async Task<IActionResult> ManageProductAsync([FromBody] ProductRequest productRequest)
+        {
+            return await _productRepository.ManageProductAsync(productRequest);
+        }
+
+
+
+
 
 
 

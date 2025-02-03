@@ -18,7 +18,9 @@
         public string? image_url { get; set; }
         public string? categoryId { get; set; }
         public double? Rating { get; set; } 
-        public int? ReviewCount { get; set; }  
+        public int? ReviewCount { get; set; }
+        public bool? isremovedfromStore { get; set; }
+
 
     }
 }
