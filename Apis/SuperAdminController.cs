@@ -62,6 +62,13 @@ namespace FirebaseApiMain.Apis
 
 
 
+        [HttpPost("ManageOrderAsync")]
+        public async Task<IActionResult> ManageOrderAsync(OrderRequest orderRequest)
+        {
+
+            return await _productRepository.ManageOrderAsync(orderRequest);
+        }
+
 
 
     }

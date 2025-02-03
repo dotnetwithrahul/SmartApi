@@ -80,6 +80,8 @@ namespace FirebaseApiMain.Apis
 
 
 
+
+
         [HttpPost("UpdateProductAsync")]
 
         public async Task<IActionResult> UpdateProductAsync(ProductImageRequest productImageRequest)
@@ -89,6 +91,12 @@ namespace FirebaseApiMain.Apis
 
              return Ok(data);
         }
+
+
+
+
+
+
 
         //[HttpPost("ManageCustomerImage")]
         //public async Task<IActionResult> ManageCustomerImage( IFormFile? ImageFile)

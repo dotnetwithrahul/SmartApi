@@ -210,7 +210,7 @@ namespace FirebaseApiMain.Infrastructure.Auth.Services
                 issuer: Configuration["JwtSection:Issuer"],
                 audience: Configuration["JwtSection:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(2), // Token expiration
+                expires: DateTime.UtcNow.AddDays(1), // Token expiration
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
