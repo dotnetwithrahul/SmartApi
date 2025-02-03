@@ -45,6 +45,8 @@ namespace FirebaseApiMain.Infrastructure.Interface
 
 
         Task<IActionResult> GetAdminProducts(int page, int pageSize);
+
+        Task<IActionResult> DeleteProductAsync(ProductRequest productRequest);
         /// <summary>
         /// Fetches a product by its unique ID.
         /// </summary>

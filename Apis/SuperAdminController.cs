@@ -42,7 +42,14 @@ namespace FirebaseApiMain.Apis
         }
 
 
-        
+        [HttpPost("DeleteProductAsync")]
+        public async Task<IActionResult> DeleteProductAsync(ProductRequest productRequest)
+        {
+            return await _productRepository.DeleteProductAsync( productRequest);
+        }
+
+
+
 
 
 

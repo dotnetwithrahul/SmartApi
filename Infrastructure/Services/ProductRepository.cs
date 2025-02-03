@@ -254,6 +254,10 @@ namespace FirebaseApiMain.Infrastructure.Services
         }
 
 
+
+
+
+
         public async Task<string> UploadCatImageToFirebaseStorageAsync(IFormFile imageFile)
         {
             try
@@ -287,6 +291,50 @@ namespace FirebaseApiMain.Infrastructure.Services
 
 
 
+        public async Task<IActionResult> DeleteProductAsync(ProductRequest productRequest)
+        {
+            if (string.IsNullOrEmpty(productRequest.ProductId))
+            {
+                return new BadRequestObjectResult("Product ID must be provided for delete operation.");
+            }
+
+            string productUrl = $"{FirebaseContext.FirebaseDatabaseUrl}/products/{productRequest.ProductId}.json?auth={FirebaseContext.FirebaseAuthKey}";
+
+            // Step 1: Fetch the product details first to get the image URL
+            var productResponse = await _client.GetAsync(productUrl);
+            if (!productResponse.IsSuccessStatusCode)
+            {
+                return new StatusCodeResult((int)productResponse.StatusCode);
+            }
+
+            var productData = await productResponse.Content.ReadAsStringAsync();
+            var product = JsonSerializer.Deserialize<Product>(productData);
+
+            // Step 2: Delete the image from Firebase Storage
+            if (!string.IsNullOrEmpty(product?.image_url))
+            {
+                try
+                {
+                    // Extract the image filename from the URL
+                    var imageFileName = product.image_url.Split('/').Last();
+
+                    // Initialize FirebaseStorage and delete the image using the filename
+                    var firebaseStorage = new FirebaseStorage("smartecom-cb32c.appspot.com");
+                    await firebaseStorage.Child("products").Child(imageFileName).DeleteAsync(); // Delete the file from Firebase Storage
+
+                    Console.WriteLine($"Image {imageFileName} deleted from Firebase Storage.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting image: {ex.Message}");
+                    // You may want to handle this exception differently, depending on your needs
+                }
+            }
+
+         
+
+            return new OkObjectResult("hi");
+        }
 
 
 
@@ -1044,9 +1092,9 @@ namespace FirebaseApiMain.Infrastructure.Services
                     // SMTP email sending configuration
                     string smtpServer = "smtp.gmail.com";
                     int smtpPort = 587; // or 465 for SSL
-                    string smtpUsername = "facebookfire96@gmail.com";
-                    string smtpPassword = "pbml emow qhsk oaws";
-                    string fromEmail = "facebookfire96@gmail.com";
+                    string smtpUsername = "smart4customercare@gmail.com";
+                    string smtpPassword = "kyzp huvu nnln ebml";
+                    string fromEmail = "smart4customercare@gmail.com";
 
                     var mailMessage = new MailMessage
                     {
@@ -1355,9 +1403,9 @@ namespace FirebaseApiMain.Infrastructure.Services
                 // SMTP email sending configuration
                 string smtpServer = "smtp.gmail.com";
                 int smtpPort = 587;
-                string smtpUsername = "facebookfire96@gmail.com";
-                string smtpPassword = "pbml emow qhsk oaws";
-                string fromEmail = "facebookfire96@gmail.com";
+                string smtpUsername = "smart4customercare@gmail.com";
+                string smtpPassword = "kyzp huvu nnln ebml";
+                string fromEmail = "smart4customercare@gmail.com";
 
                 // Compose the email
                 var mailMessage = new MailMessage
@@ -1420,9 +1468,9 @@ namespace FirebaseApiMain.Infrastructure.Services
         //                    // SMTP email sending configuration
         //                    string smtpServer = "smtp.gmail.com";
         //                    int smtpPort = 587;
-        //                    string smtpUsername = "facebookfire96@gmail.com";
-        //                    string smtpPassword = "pbml emow qhsk oaws";
-        //                    string fromEmail = "facebookfire96@gmail.com";
+        //                    string smtpUsername = "smart4customercare@gmail.com";
+        //                    string smtpPassword = "kyzp huvu nnln ebml";
+        //                    string fromEmail = "smart4customercare@gmail.com";
 
         //                    // Compose the email
         //                    var mailMessage = new MailMessage
@@ -2913,9 +2961,9 @@ namespace FirebaseApiMain.Infrastructure.Services
         {
             string smtpServer = "smtp.gmail.com";
             int smtpPort = 587;
-            string smtpUsername = "facebookfire96@gmail.com";
-            string smtpPassword = "pbml emow qhsk oaws";
-            string fromEmail = "facebookfire96@gmail.com";
+            string smtpUsername = "smart4customercare@gmail.com";
+            string smtpPassword = "kyzp huvu nnln ebml";
+            string fromEmail = "smart4customercare@gmail.com";
 
             // Create the HTML email content with CSS styling and order summary
             string htmlBody = $@"
@@ -3072,9 +3120,9 @@ namespace FirebaseApiMain.Infrastructure.Services
         {
             string smtpServer = "smtp.gmail.com";
             int smtpPort = 587;
-            string smtpUsername = "facebookfire96@gmail.com";
-            string smtpPassword = "pbml emow qhsk oaws";
-            string fromEmail = "facebookfire96@gmail.com";
+            string smtpUsername = "smart4customercare@gmail.com";
+            string smtpPassword = "kyzp huvu nnln ebml";
+            string fromEmail = "smart4customercare@gmail.com";
 
             string htmlBody = $@"
     <html>
